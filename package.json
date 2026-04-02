@@ -45,7 +45,8 @@
     "pg": "^8.20.0",
     "pino": "^10.1.1",
     "pino-http": "^11.0.0",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "xendit-node": "^7.0.0"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"
