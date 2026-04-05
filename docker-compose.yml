@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:18
-    container_name: postgres_container
+    container_name: postgres_finpro
     restart: always
     volumes:
       - ./docker/postgres:/var/lib/postgresql/18/docker

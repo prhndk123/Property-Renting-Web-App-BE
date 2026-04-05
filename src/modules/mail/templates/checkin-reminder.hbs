@@ -1,0 +1,40 @@
+<html>
+  <head><meta charset="utf-8" /></head>
+  <body
+    style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;"
+  >
+    <h2 style="color: #2563eb;">Check-in Reminder 🏨</h2>
+    <p>Hi <strong>{{name}}</strong>,</p>
+    <p>This is a friendly reminder that your check-in is
+      <strong>tomorrow</strong>!</p>
+    <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+      <tr>
+        <td
+          style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold;"
+        >Property</td>
+        <td
+          style="padding: 8px; border: 1px solid #e5e7eb;"
+        >{{propertyName}}</td>
+      </tr>
+      <tr>
+        <td
+          style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold;"
+        >Address</td>
+        <td
+          style="padding: 8px; border: 1px solid #e5e7eb;"
+        >{{propertyAddress}}</td>
+      </tr>
+      <tr>
+        <td
+          style="padding: 8px; border: 1px solid #e5e7eb; font-weight: bold;"
+        >Check-in Date</td>
+        <td
+          style="padding: 8px; border: 1px solid #e5e7eb;"
+        >{{checkinDate}}</td>
+      </tr>
+    </table>
+    <p>Please make sure to arrive on time. We look forward to seeing you!</p>
+    <p style="color: #6b7280; font-size: 12px; margin-top: 32px;">This is an
+      automated email. Please do not reply.</p>
+  </body>
+</html>
