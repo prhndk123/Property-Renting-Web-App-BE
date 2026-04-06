@@ -111,6 +111,7 @@ model Property {
   tenantId    String   @db.Uuid
   categoryId  String   @db.Uuid
   name        String
+  slug        String   @unique @default(uuid())
   description String   @db.Text
   address     String
   city        String
