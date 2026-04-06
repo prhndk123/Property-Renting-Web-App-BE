@@ -7,7 +7,7 @@ import {
   CreateRoomDto,
   GetRoomsQueryDto,
   UpdateRoomDto,
-} from "../../dto/room.dto.js";
+} from "./dto/room.dto.js";
 
 export class RoomRouter {
   private router: Router;

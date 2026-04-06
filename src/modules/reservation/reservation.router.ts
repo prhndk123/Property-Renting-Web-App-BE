@@ -5,7 +5,7 @@ import { ValidationMiddleware } from "../../middlewares/validation.middleware.js
 import {
   CreateReservationDto,
   GetReservationsQueryDto,
-} from "../../dto/reservation.dto.js";
+} from "./dto/reservation.dto.js";
 
 export class ReservationRouter {
   private router: Router;

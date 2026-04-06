@@ -1,10 +1,13 @@
-import { PrismaClient, Prisma } from "../../generated/prisma/client.js";
+import {
+  PrismaClient,
+  Prisma,
+} from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
 import { AvailabilityService } from "../availability/availability.service.js";
 import {
   CreateReservationDto,
   GetReservationsQueryDto,
-} from "../../dto/reservation.dto.js";
+} from "./dto/reservation.dto.js";
 import { XenditService } from "../payment/xendit.service.js";
 import { MailService } from "../mail/mail.service.js";
 

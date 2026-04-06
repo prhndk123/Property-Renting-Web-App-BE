@@ -1,34 +1,81 @@
-import { PrismaClient, Prisma } from "../../generated/prisma/client.js";
+import {
+  PrismaClient,
+  Prisma,
+} from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
 import {
   CreatePropertyDto,
   GetPropertiesQueryDto,
   UpdatePropertyDto,
-} from "../../dto/property.dto.js";
+} from "./dto/property.dto.js";
 
 export class PropertyService {
   constructor(private prisma: PrismaClient) {}
 
+  private generateSlug(name: string) {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now();
+  }
+
   async createProperty(tenantId: string, data: CreatePropertyDto) {
+    const slug = this.generateSlug(data.name);
     return this.prisma.property.create({
-      data: { ...data, tenantId },
+      data: { ...data, tenantId, slug },
       include: { category: true, images: true },
     });
   }
 
   async getProperties(query: GetPropertiesQueryDto) {
-    const { page, take, sortBy, sortOrder, city, categoryId, search } = query;
+    const {
+      page,
+      take,
+      sortBy,
+      sortOrder,
+      city,
+      categoryId,
+      search,
+      startDate,
+      endDate,
+      capacity,
+    } = query;
+
+    const roomFilter: any = {};
+    if (capacity) roomFilter.capacity = { gte: capacity };
+    if (startDate && endDate) {
+      roomFilter.availability = {
+        none: {
+          date: { gte: new Date(startDate), lt: new Date(endDate) },
+          isAvailable: false,
+        },
+      };
+    }
+
     const where: Prisma.PropertyWhereInput = {
       city: city ? { contains: city, mode: "insensitive" } : undefined,
-      categoryId,
       name: search ? { contains: search, mode: "insensitive" } : undefined,
+      category: categoryId
+        ? /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+            categoryId,
+          )
+          ? { id: categoryId }
+          : { name: { equals: categoryId, mode: "insensitive" } }
+        : undefined,
+      ...(Object.keys(roomFilter).length > 0 && {
+        rooms: { some: roomFilter },
+      }),
     };
+    const orderBy: any = {};
+    if (sortBy === "price" || sortBy === "rating") {
+      orderBy.createdAt = sortOrder;
+    } else {
+      orderBy[sortBy] = sortOrder;
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.property.findMany({
         where,
         take,
         skip: (page - 1) * take,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy,
         include: {
           category: true,
           images: true,
@@ -38,6 +85,20 @@ export class PropertyService {
       this.prisma.property.count({ where }),
     ]);
     return { data, meta: { page, take, total } };
+  }
+
+  async getPropertyBySlug(slug: string) {
+    const property = await this.prisma.property.findUnique({
+      where: { slug },
+      include: {
+        category: true,
+        images: true,
+        rooms: { include: { images: true } },
+        tenant: { select: { name: true, profilePicture: true } },
+      },
+    });
+    if (!property) throw new ApiError("Property not found", 404);
+    return property;
   }
 
   async getPropertyById(id: string) {

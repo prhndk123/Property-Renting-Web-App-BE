@@ -4,6 +4,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import "reflect-metadata";
 import * as dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import { PORT } from "./config/env.js";
+import { corsOptions } from "./config/cors.js";
+import { loggerHttp } from "./lib/logger-http.js";
 import { prisma } from "./lib/prisma.js";
 
 // Services
@@ -41,10 +45,10 @@ import { ReservationRouter } from "./modules/reservation/reservation.router.js";
 import { ReviewRouter } from "./modules/review/review.router.js";
 import { DashboardRouter } from "./modules/dashboard/dashboard.router.js";
 import { MediaRouter } from "./modules/media/media.router.js";
-import { AuthMiddleware } from "./middlewares/auth.middleware.js";
-import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
 
 // Middlewares
+import { AuthMiddleware } from "./middlewares/auth.middleware.js";
+import { ValidationMiddleware } from "./middlewares/validation.middleware.js";
 
 dotenv.config();
 
@@ -62,15 +66,10 @@ export class App {
   }
 
   private configure() {
-    this.app.use(
-      cors({
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
-        credentials: true,
-      }),
-    );
-
+    this.app.use(cors(corsOptions));
+    this.app.use(loggerHttp);
     this.app.use(express.json());
-
+    this.app.use(cookieParser());
     this.app.use(
       "/uploads",
       express.static(path.join(__dirname, "../public/uploads")),
@@ -194,10 +193,10 @@ export class App {
   }
 
   public start() {
-    const PORT = process.env.PORT || 8000;
+    const port = PORT || 8000;
 
-    this.app.listen(PORT, () => {
-      console.log(`🚀 Server running on port: ${PORT}`);
+    this.app.listen(port, () => {
+      console.log(`🚀 Server running on port: ${port}`);
     });
   }
 }

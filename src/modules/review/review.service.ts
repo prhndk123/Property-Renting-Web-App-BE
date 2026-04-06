@@ -1,10 +1,13 @@
-import { PrismaClient, Prisma } from "../../generated/prisma/client.js";
+import {
+  PrismaClient,
+  Prisma,
+} from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
 import {
   CreateReplyDto,
   CreateReviewDto,
   GetReviewsQueryDto,
-} from "../../dto/review.dto.js";
+} from "./dto/review.dto.js";
 
 export class ReviewService {
   constructor(private prisma: PrismaClient) {}

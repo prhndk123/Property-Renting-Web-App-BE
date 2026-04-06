@@ -6,7 +6,7 @@ import {
   GetUsersQueryDto,
   UpdatePasswordDto,
   UpdateProfileDto,
-} from "../../dto/user.dto.js";
+} from "./dto/user.dto.js";
 
 export class UserRouter {
   private router: Router;

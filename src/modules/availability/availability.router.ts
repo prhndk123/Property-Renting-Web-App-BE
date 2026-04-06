@@ -3,10 +3,7 @@ import { AvailabilityController } from "./availability.controller.js";
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
 import { UserRole } from "../../types/user-role.js";
 import { ValidationMiddleware } from "../../middlewares/validation.middleware.js";
-import {
-  SetAvailabilityDto,
-  SetPeakRateDto,
-} from "../../dto/availability.dto.js";
+import { SetAvailabilityDto, SetPeakRateDto } from "./dto/availability.dto.js";
 
 export class AvailabilityRouter {
   private router: Router;

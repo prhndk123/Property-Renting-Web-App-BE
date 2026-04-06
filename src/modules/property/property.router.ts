@@ -7,7 +7,7 @@ import {
   CreatePropertyDto,
   GetPropertiesQueryDto,
   UpdatePropertyDto,
-} from "../../dto/property.dto.js";
+} from "./dto/property.dto.js";
 
 export class PropertyRouter {
   private router: Router;
@@ -27,7 +27,8 @@ export class PropertyRouter {
       this.propertyController.getProperties,
     );
     this.router.get("/categories", this.propertyController.getCategories);
-    this.router.get("/:id", this.propertyController.getPropertyById);
+    this.router.get("/:slug", this.propertyController.getPropertyBySlug);
+    this.router.get("/id/:id", this.propertyController.getPropertyById); // Use /id/:id to avoid conflict with /:slug
 
     this.router.use(this.authMiddleware.verifyToken(process.env.JWT_SECRET!));
     this.router.use(this.authMiddleware.verifyRole([UserRole.TENANT]));

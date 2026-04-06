@@ -19,6 +19,13 @@ export class PropertyController {
     res.status(200).send(result);
   };
 
+  getPropertyBySlug = async (req: Request, res: Response) => {
+    const result = await this.propertyService.getPropertyBySlug(
+      req.params.slug as string,
+    );
+    res.status(200).send(result);
+  };
+
   getPropertyById = async (req: Request, res: Response) => {
     const result = await this.propertyService.getPropertyById(
       req.params.id as string,

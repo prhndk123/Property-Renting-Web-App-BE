@@ -1,8 +1,8 @@
-import { PrismaClient, User } from "../../generated/prisma/client.js";
+import { PrismaClient, User } from "../../../generated/prisma/client/index.js";
 import { comparePassword, hashPassword } from "../../lib/argon.js";
 import { ApiError } from "../../utils/api-error.js";
 import crypto from "crypto";
-import { RegisterDto, LoginDto, ResetPasswordDto } from "../../dto/auth.dto.js";
+import { RegisterDto, LoginDto, ResetPasswordDto } from "./dto/auth.dto.js";
 import { MailService } from "../mail/mail.service.js";
 import {
   generateAccessToken,
@@ -23,11 +23,31 @@ export class AuthService {
 
     const hashedPassword = await hashPassword(body.password);
     const user = await this.prisma.user.create({
-      data: { ...body, password: hashedPassword },
+      data: { ...body, password: hashedPassword, isVerified: false },
     });
 
+    await this.createVerificationToken(user);
     await this.sendWelcomeEmail(user);
-    return { message: "Register Success" };
+
+    return {
+      message:
+        "Register Success. Please check your email to verify your account.",
+    };
+  }
+
+  private async createVerificationToken(user: User) {
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    await this.prisma.emailVerification.create({
+      data: { userId: user.id, token, expiresAt },
+    });
+    const verifyLink = `${process.env.FRONTEND_URL || "http://localhost:5173"}/verify-email?token=${token}`;
+    return this.mailService
+      .sendEmail(user.email, "Verify Your Email ✉️", "verify-email", {
+        name: user.name,
+        verifyLink,
+      })
+      .catch((e) => console.error("Verification email failed", e));
   }
 
   private async sendWelcomeEmail(user: User) {
@@ -38,7 +58,7 @@ export class AuthService {
         role: user.role,
         loginLink: `${baseUrl}/login`,
       })
-      .catch((e) => console.error("Email failed", e));
+      .catch((e) => console.error("Welcome email failed", e));
   }
 
   async login(body: LoginDto) {
@@ -130,6 +150,26 @@ export class AuthService {
       }),
     ]);
     return { message: "Password reset successfully" };
+  }
+
+  async verifyEmail(token: string) {
+    const request = await this.prisma.emailVerification.findFirst({
+      where: { token, expiresAt: { gt: new Date() }, used: false },
+    });
+    if (!request)
+      throw new ApiError("Invalid or expired verification token", 400);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: request.userId },
+        data: { isVerified: true },
+      }),
+      this.prisma.emailVerification.update({
+        where: { id: request.id },
+        data: { used: true },
+      }),
+    ]);
+    return { message: "Email verified successfully" };
   }
 
   async getProfile(userId: string) {

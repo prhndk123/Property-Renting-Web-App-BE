@@ -7,7 +7,7 @@ import {
   CreateReplyDto,
   CreateReviewDto,
   GetReviewsQueryDto,
-} from "../../dto/review.dto.js";
+} from "./dto/review.dto.js";
 
 export class ReviewRouter {
   private router: Router;

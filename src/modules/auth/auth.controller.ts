@@ -51,6 +51,12 @@ export class AuthController {
     res.status(200).send(result);
   };
 
+  verifyEmail = async (req: Request, res: Response) => {
+    const { token } = req.body;
+    const result = await this.authService.verifyEmail(token);
+    res.status(200).send(result);
+  };
+
   getProfile = async (req: Request, res: Response) => {
     const userId = (req as AuthRequest).user?.id;
     if (!userId) {

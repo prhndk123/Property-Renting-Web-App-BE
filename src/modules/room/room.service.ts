@@ -1,10 +1,13 @@
-import { PrismaClient, Prisma } from "../../generated/prisma/client.js";
+import {
+  PrismaClient,
+  Prisma,
+} from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
 import {
   CreateRoomDto,
   GetRoomsQueryDto,
   UpdateRoomDto,
-} from "../../dto/room.dto.js";
+} from "./dto/room.dto.js";
 
 export class RoomService {
   constructor(private prisma: PrismaClient) {}

@@ -3,7 +3,7 @@ import { DashboardController } from "./dashboard.controller.js";
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
 import { UserRole } from "../../types/user-role.js";
 import { ValidationMiddleware } from "../../middlewares/validation.middleware.js";
-import { GetDashboardQueryDto } from "../../dto/dashboard.dto.js";
+import { GetDashboardQueryDto } from "./dto/dashboard.dto.js";
 
 export class DashboardRouter {
   private router: Router;

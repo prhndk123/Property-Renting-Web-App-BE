@@ -1,9 +1,6 @@
-import { PrismaClient } from "../../generated/prisma/client.js";
+import { PrismaClient } from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
-import {
-  SetAvailabilityDto,
-  SetPeakRateDto,
-} from "../../dto/availability.dto.js";
+import { SetAvailabilityDto, SetPeakRateDto } from "./dto/availability.dto.js";
 
 export class AvailabilityService {
   constructor(private prisma: PrismaClient) {}

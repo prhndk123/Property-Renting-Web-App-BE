@@ -6,7 +6,8 @@ import {
   LoginDto,
   ForgotPasswordDto,
   ResetPasswordDto,
-} from "../../dto/auth.dto.js";
+  VerifyEmailDto,
+} from "./dto/auth.dto.js";
 
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
 
@@ -40,6 +41,11 @@ export class AuthRouter {
       "/reset-password",
       this.validationMiddleware.validateBody(ResetPasswordDto),
       this.authController.resetPassword,
+    );
+    this.router.post(
+      "/verify-email",
+      this.validationMiddleware.validateBody(VerifyEmailDto),
+      this.authController.verifyEmail,
     );
     this.router.post("/refresh", this.authController.refresh);
     this.router.post("/logout", this.authController.logout);

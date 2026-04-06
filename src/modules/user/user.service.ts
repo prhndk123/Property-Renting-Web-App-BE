@@ -1,4 +1,8 @@
-import { PrismaClient, Prisma, User } from "../../generated/prisma/client.js";
+import {
+  PrismaClient,
+  Prisma,
+  User,
+} from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
 import { comparePassword, hashPassword } from "../../lib/argon.js";
 import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
@@ -7,7 +11,7 @@ import {
   GetUsersQueryDto,
   UpdateProfileDto,
   UpdatePasswordDto,
-} from "../../dto/user.dto.js";
+} from "./dto/user.dto.js";
 
 export class UserService {
   constructor(
@@ -53,7 +57,7 @@ export class UserService {
     await this.getUser(id);
     if (body.email) await this.checkEmail(body.email, id);
     await this.prisma.user.update({ where: { id }, data: body });
-    return { message: "update user success" };
+    return { message: "Update user success" };
   }
 
   private async checkEmail(email: string, excludeId?: string) {
@@ -109,6 +113,6 @@ export class UserService {
   async deleteUser(id: string) {
     await this.getUser(id);
     await this.prisma.user.delete({ where: { id } });
-    return { message: "delete user success" };
+    return { message: "Delete user success" };
   }
 }
