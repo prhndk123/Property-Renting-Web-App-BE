@@ -48,7 +48,6 @@ export class ValidationMiddleware {
         configurable: true,
         enumerable: true,
       });
-
       next();
     };
   }

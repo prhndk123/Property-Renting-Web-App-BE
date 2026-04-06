@@ -1,4 +1,7 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+} from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
 import {
   CreatePropertyDto,
@@ -87,6 +90,20 @@ export class PropertyService {
   async getPropertyBySlug(slug: string) {
     const property = await this.prisma.property.findUnique({
       where: { slug },
+      include: {
+        category: true,
+        images: true,
+        rooms: { include: { images: true } },
+        tenant: { select: { name: true, profilePicture: true } },
+      },
+    });
+    if (!property) throw new ApiError("Property not found", 404);
+    return property;
+  }
+
+  async getPropertyById(id: string) {
+    const property = await this.prisma.property.findUnique({
+      where: { id },
       include: {
         category: true,
         images: true,

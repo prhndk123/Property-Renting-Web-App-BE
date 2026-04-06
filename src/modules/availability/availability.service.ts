@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
 import { SetAvailabilityDto, SetPeakRateDto } from "./dto/availability.dto.js";
 

@@ -1,4 +1,4 @@
-import { PrismaClient, User } from "@prisma/client";
+import { PrismaClient, User } from "../../../generated/prisma/client/index.js";
 import { comparePassword, hashPassword } from "../../lib/argon.js";
 import { ApiError } from "../../utils/api-error.js";
 import crypto from "crypto";
@@ -27,6 +27,8 @@ export class AuthService {
     });
 
     await this.createVerificationToken(user);
+    await this.sendWelcomeEmail(user);
+
     return {
       message:
         "Register Success. Please check your email to verify your account.",
@@ -56,7 +58,7 @@ export class AuthService {
         role: user.role,
         loginLink: `${baseUrl}/login`,
       })
-      .catch((e) => console.error("Email failed", e));
+      .catch((e) => console.error("Welcome email failed", e));
   }
 
   async login(body: LoginDto) {

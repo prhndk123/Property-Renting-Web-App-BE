@@ -26,5 +26,6 @@ export const sendEmail = async ({ to, subject, html }: SendEmailParams) => {
     return info;
   } catch (error) {
     console.error("Error sending email:", error);
+    // Don't throw error to prevent transaction failure, just log it
   }
 };

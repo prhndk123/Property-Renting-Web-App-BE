@@ -26,6 +26,13 @@ export class PropertyController {
     res.status(200).send(result);
   };
 
+  getPropertyById = async (req: Request, res: Response) => {
+    const result = await this.propertyService.getPropertyById(
+      req.params.id as string,
+    );
+    res.status(200).send(result);
+  };
+
   updateProperty = async (req: Request, res: Response) => {
     const tenantId = (req as AuthRequest).user?.id!;
     const result = await this.propertyService.updateProperty(

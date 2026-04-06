@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../../../generated/prisma/client/index.js";
 import { MailService } from "../mail/mail.service.js";
 
 export class CronService {
