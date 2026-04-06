@@ -2,3 +2,11 @@ node_modules
 dist
 docker
 generated
+package-lock.json
+*.hbs
+*.sql
+*.prisma
+*.conf
+*.wasm
+*.pid
+*.opts

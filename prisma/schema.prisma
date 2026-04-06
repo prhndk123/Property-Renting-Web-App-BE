@@ -1,9 +1,10 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../generated/prisma/client"
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 // ─── ENUMS ──────────────────────────────────────────────────────────────────────
@@ -53,11 +54,11 @@ model User {
   // Relations
   emailVerifications EmailVerification[]
   passwordResets     PasswordReset[]
-  refreshToken      RefreshToken?
-  properties         Property[]          // Properties owned by tenant
-  reservations       Reservation[]       // Reservations made by user
+  refreshToken       RefreshToken?
+  properties         Property[] // Properties owned by tenant
+  reservations       Reservation[] // Reservations made by user
   reviews            Review[]
-  reviewReplies      ReviewReply[]       // Replies by tenant
+  reviewReplies      ReviewReply[] // Replies by tenant
 
   @@index([role])
   @@map("users")
@@ -155,7 +156,7 @@ model Room {
   createdAt   DateTime @default(now())
 
   // Relations
-  property         Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property         Property           @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   images           RoomImage[]
   availability     RoomAvailability[]
   peakSeasonRates  PeakSeasonRate[]
@@ -178,10 +179,10 @@ model RoomImage {
 }
 
 model RoomAvailability {
-  id          String  @id @default(uuid()) @db.Uuid
-  roomId      String  @db.Uuid
+  id          String   @id @default(uuid()) @db.Uuid
+  roomId      String   @db.Uuid
   date        DateTime @db.Date
-  isAvailable Boolean @default(true)
+  isAvailable Boolean  @default(true)
 
   // Relations
   room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -271,7 +272,7 @@ model Review {
   reservationId String   @unique @db.Uuid
   propertyId    String   @db.Uuid
   userId        String   @db.Uuid
-  rating        Int      // 1-5
+  rating        Int // 1-5
   comment       String?  @db.Text
   createdAt     DateTime @default(now())
 
