@@ -119,7 +119,7 @@ export class ReservationService {
 
   async getReservations(
     userId: string,
-    role: string,
+    role: string | null,
     query: GetReservationsQueryDto,
   ) {
     const { page, take, sortBy, sortOrder } = query;
@@ -139,7 +139,7 @@ export class ReservationService {
 
   private buildReservationWhere(
     userId: string,
-    role: string,
+    role: string | null,
     query: GetReservationsQueryDto,
   ): Prisma.ReservationWhereInput {
     const { status, startDate, endDate, orderId } = query;

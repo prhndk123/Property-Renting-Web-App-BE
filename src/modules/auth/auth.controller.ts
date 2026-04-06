@@ -19,7 +19,30 @@ export class AuthController {
 
     res.cookie("accessToken", result.accessToken, cookieOptions);
     res.cookie("refreshToken", result.refreshToken, cookieOptions);
-    const { refreshToken, accessToken, password, ...response } = result as any;
+    const { refreshToken, accessToken, ...response } = result as any;
+    res.status(200).send(response);
+  };
+
+  googleLogin = async (req: Request, res: Response) => {
+    const body = req.body;
+    const result = await this.authService.googleLogin(body);
+
+    res.cookie("accessToken", result.accessToken, cookieOptions);
+    res.cookie("refreshToken", result.refreshToken, cookieOptions);
+    const { refreshToken, accessToken, ...response } = result as any;
+    res.status(200).send(response);
+  };
+
+  onboarding = async (req: Request, res: Response) => {
+    const userId = (req as AuthRequest).user?.id;
+    if (!userId) {
+      throw new ApiError("Unauthorized", 401);
+    }
+    const result = await this.authService.onboarding(userId, req.body);
+
+    res.cookie("accessToken", result.accessToken, cookieOptions);
+    res.cookie("refreshToken", result.refreshToken, cookieOptions);
+    const { refreshToken, accessToken, ...response } = result as any;
     res.status(200).send(response);
   };
 
@@ -30,6 +53,7 @@ export class AuthController {
     res.clearCookie("refreshToken", cookieOptions);
     res.status(200).send(result);
   };
+
   refresh = async (req: Request, res: Response) => {
     const { refreshToken } = req.cookies;
     const result = await this.authService.refresh(refreshToken);
@@ -52,8 +76,12 @@ export class AuthController {
   };
 
   verifyEmail = async (req: Request, res: Response) => {
-    const { token } = req.body;
-    const result = await this.authService.verifyEmail(token);
+    const result = await this.authService.verifyEmail(req.body);
+    res.status(200).send(result);
+  };
+
+  resendVerification = async (req: Request, res: Response) => {
+    const result = await this.authService.resendVerification(req.body.email);
     res.status(200).send(result);
   };
 
