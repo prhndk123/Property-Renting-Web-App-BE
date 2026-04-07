@@ -88,12 +88,19 @@ export class PropertyService {
   }
 
   async getPropertyBySlug(slug: string) {
+    // If slug is a UUID, use getPropertyById instead
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        slug,
+      );
+    if (isUuid) return this.getPropertyById(slug);
+
     const property = await this.prisma.property.findUnique({
       where: { slug },
       include: {
         category: true,
         images: true,
-        rooms: { include: { images: true } },
+        rooms: { include: { images: true, availability: true } },
         tenant: { select: { name: true, profilePicture: true } },
       },
     });
@@ -107,7 +114,7 @@ export class PropertyService {
       include: {
         category: true,
         images: true,
-        rooms: { include: { images: true } },
+        rooms: { include: { images: true, availability: true } },
         tenant: { select: { name: true, profilePicture: true } },
       },
     });
