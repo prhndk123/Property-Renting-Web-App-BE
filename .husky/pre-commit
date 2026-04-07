@@ -1,1 +1,4 @@
-npx --no lint-staged --allow-empty
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+npx lint-staged
