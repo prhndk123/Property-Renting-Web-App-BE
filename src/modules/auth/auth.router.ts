@@ -7,6 +7,9 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   VerifyEmailDto,
+  GoogleLoginDto,
+  OnboardingDto,
+  ResendVerificationDto,
 } from "./dto/auth.dto.js";
 
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
@@ -33,6 +36,17 @@ export class AuthRouter {
       this.authController.login,
     );
     this.router.post(
+      "/google",
+      this.validationMiddleware.validateBody(GoogleLoginDto),
+      this.authController.googleLogin,
+    );
+    this.router.post(
+      "/onboarding",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.validationMiddleware.validateBody(OnboardingDto),
+      this.authController.onboarding,
+    );
+    this.router.post(
       "/forgot-password",
       this.validationMiddleware.validateBody(ForgotPasswordDto),
       this.authController.forgotPassword,
@@ -46,6 +60,11 @@ export class AuthRouter {
       "/verify-email",
       this.validationMiddleware.validateBody(VerifyEmailDto),
       this.authController.verifyEmail,
+    );
+    this.router.post(
+      "/resend-verification",
+      this.validationMiddleware.validateBody(ResendVerificationDto),
+      this.authController.resendVerification,
     );
     this.router.post("/refresh", this.authController.refresh);
     this.router.post("/logout", this.authController.logout);

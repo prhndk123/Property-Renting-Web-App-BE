@@ -6,7 +6,7 @@ import { UserRole } from "../types/user-role.js";
 export interface AuthRequest extends Request {
   user?: {
     id: string;
-    role: UserRole;
+    role: UserRole | null;
   };
 }
 

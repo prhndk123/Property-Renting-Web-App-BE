@@ -69,7 +69,7 @@ export class UserService {
 
   async updatePassword(id: string, body: UpdatePasswordDto) {
     const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user || !(await comparePassword(body.oldPassword, user.password))) {
+    if (!user || !user.password || !(await comparePassword(body.oldPassword, user.password))) {
       throw new ApiError("Old password incorrect", 400);
     }
     const hashedPassword = await hashPassword(body.newPassword);
