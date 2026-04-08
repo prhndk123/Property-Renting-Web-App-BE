@@ -38,6 +38,7 @@ export class PropertyService {
       capacity,
     } = query;
 
+    // ── Build room-level filters ──
     const roomFilter: any = {};
     if (capacity) roomFilter.capacity = { gte: capacity };
     if (startDate && endDate) {
@@ -49,42 +50,166 @@ export class PropertyService {
       };
     }
 
+    // ── Parse multi-category filter ──
+    let categoryWhere: Prisma.PropertyWhereInput | undefined;
+    if (categoryId) {
+      const categories = categoryId.split(",").map((c) => c.trim());
+      const uuidRegex =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+      const uuids = categories.filter((c) => uuidRegex.test(c));
+      const names = categories.filter((c) => !uuidRegex.test(c));
+
+      const orConditions: Prisma.PropertyWhereInput[] = [];
+      if (uuids.length > 0) {
+        orConditions.push({ categoryId: { in: uuids } });
+      }
+      if (names.length > 0) {
+        orConditions.push({
+          category: { name: { in: names, mode: "insensitive" } },
+        });
+      }
+
+      if (orConditions.length === 1) {
+        categoryWhere = orConditions[0];
+      } else if (orConditions.length > 1) {
+        categoryWhere = { OR: orConditions };
+      }
+    }
+
+    // ── Build WHERE clause ──
+    // Only show properties that have at least one room (i.e., some availability)
     const where: Prisma.PropertyWhereInput = {
       city: city ? { contains: city, mode: "insensitive" } : undefined,
       name: search ? { contains: search, mode: "insensitive" } : undefined,
-      category: categoryId
-        ? /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-            categoryId,
-          )
-          ? { id: categoryId }
-          : { name: { equals: categoryId, mode: "insensitive" } }
-        : undefined,
-      ...(Object.keys(roomFilter).length > 0 && {
-        rooms: { some: roomFilter },
-      }),
+      ...categoryWhere,
+      // Must have at least one room
+      rooms: {
+        some: {
+          ...roomFilter,
+        },
+      },
     };
-    const orderBy: any = {};
-    if (sortBy === "price" || sortBy === "rating") {
-      orderBy.createdAt = sortOrder;
-    } else {
-      orderBy[sortBy] = sortOrder;
+
+    // ── Sorting ──
+    // For "name" and "createdAt", we can sort directly via Prisma.
+    // For "price", we sort in application layer after computing lowestPrice.
+    const isPriceSort = sortBy === "price";
+    let orderBy: any = {};
+    if (!isPriceSort) {
+      if (sortBy === "name") {
+        orderBy = { name: sortOrder };
+      } else {
+        orderBy = { createdAt: sortOrder };
+      }
     }
 
-    const [data, total] = await Promise.all([
-      this.prisma.property.findMany({
+    // ── Fetch data ──
+    if (isPriceSort) {
+      // For price sorting, we need to fetch all matching properties first,
+      // compute lowestPrice, sort, then paginate in application layer.
+      const allProperties = await this.prisma.property.findMany({
         where,
-        take,
-        skip: (page - 1) * take,
-        orderBy,
         include: {
           category: true,
           images: true,
-          _count: { select: { rooms: true } },
+          rooms: {
+            select: { basePrice: true },
+          },
+          reviews: {
+            select: { rating: true },
+          },
+          _count: { select: { rooms: true, reviews: true } },
         },
-      }),
-      this.prisma.property.count({ where }),
-    ]);
-    return { data, meta: { page, take, total } };
+      });
+
+      // Enrich with computed fields
+      const enriched = allProperties.map((p) => this.enrichProperty(p));
+
+      // Sort by price
+      enriched.sort((a, b) => {
+        return sortOrder === "asc"
+          ? a.lowestPrice - b.lowestPrice
+          : b.lowestPrice - a.lowestPrice;
+      });
+
+      const total = enriched.length;
+      const totalPages = Math.max(1, Math.ceil(total / take));
+      const paginated = enriched.slice((page - 1) * take, page * take);
+
+      return {
+        data: paginated,
+        meta: { page, take, total, totalPages },
+      };
+    } else {
+      // For name/createdAt sorting, use Prisma pagination directly
+      const [rawData, total] = await Promise.all([
+        this.prisma.property.findMany({
+          where,
+          take,
+          skip: (page - 1) * take,
+          orderBy,
+          include: {
+            category: true,
+            images: true,
+            rooms: {
+              select: { basePrice: true },
+            },
+            reviews: {
+              select: { rating: true },
+            },
+            _count: { select: { rooms: true, reviews: true } },
+          },
+        }),
+        this.prisma.property.count({ where }),
+      ]);
+
+      const data = rawData.map((p) => this.enrichProperty(p));
+      const totalPages = Math.max(1, Math.ceil(total / take));
+
+      return {
+        data,
+        meta: { page, take, total, totalPages },
+      };
+    }
+  }
+
+  /**
+   * Enrich a raw property with computed fields:
+   * - lowestPrice: min basePrice across all rooms
+   * - isAvailable: always true (filtered in WHERE already)
+   * - averageRating: average of all review ratings
+   * - reviewCount: number of reviews
+   */
+  private enrichProperty(property: any) {
+    const rooms = property.rooms || [];
+    const reviews = property.reviews || [];
+
+    const lowestPrice =
+      rooms.length > 0
+        ? Math.min(...rooms.map((r: any) => Number(r.basePrice)))
+        : 0;
+
+    const reviewCount = reviews.length;
+    const averageRating =
+      reviewCount > 0
+        ? Math.round(
+            (reviews.reduce((sum: number, r: any) => sum + r.rating, 0) /
+              reviewCount) *
+              10,
+          ) / 10
+        : 0;
+
+    // Remove raw rooms/reviews arrays from response to keep it clean
+    const { rooms: _rooms, reviews: _reviews, ...rest } = property;
+
+    return {
+      ...rest,
+      lowestPrice,
+      isAvailable: true, // only available properties pass the WHERE filter
+      averageRating,
+      reviewCount,
+    };
   }
 
   async getPropertyBySlug(slug: string) {
@@ -138,5 +263,24 @@ export class PropertyService {
 
   async getCategories() {
     return this.prisma.propertyCategory.findMany();
+  }
+
+  async getLocations(search?: string) {
+    const whereClause = search
+      ? { city: { contains: search, mode: Prisma.QueryMode.insensitive } }
+      : {};
+
+    const properties = await this.prisma.property.findMany({
+      where: whereClause,
+      select: { city: true },
+      distinct: ["city"],
+      orderBy: { city: "asc" },
+      take: 10, // Limit to 10 results for scalable UI
+    });
+
+    return properties.map((p) => ({
+      label: p.city,
+      value: p.city.toLowerCase(),
+    }));
   }
 }

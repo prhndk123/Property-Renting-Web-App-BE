@@ -27,6 +27,7 @@ export class PropertyRouter {
       this.propertyController.getProperties,
     );
     this.router.get("/categories", this.propertyController.getCategories);
+    this.router.get("/locations", this.propertyController.getLocations);
     this.router.get("/:slug", this.propertyController.getPropertyBySlug);
     this.router.get("/id/:id", this.propertyController.getPropertyById); // Use /id/:id to avoid conflict with /:slug
 

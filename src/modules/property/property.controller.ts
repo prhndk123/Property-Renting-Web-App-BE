@@ -56,4 +56,10 @@ export class PropertyController {
     const result = await this.propertyService.getCategories();
     res.status(200).send(result);
   };
+
+  getLocations = async (req: Request, res: Response) => {
+    const search = req.query.search as string | undefined;
+    const result = await this.propertyService.getLocations(search);
+    res.status(200).send(result);
+  };
 }
