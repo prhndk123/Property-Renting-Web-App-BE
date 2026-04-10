@@ -17,6 +17,14 @@ export class UpdateProfileDto {
   email?: string;
 
   @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  businessName?: string;
+
+  @IsOptional()
   @IsUrl()
   profilePicture?: string;
 }
