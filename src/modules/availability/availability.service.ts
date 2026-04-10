@@ -1,6 +1,11 @@
 import { PrismaClient } from "../../../generated/prisma/client/index.js";
 import { ApiError } from "../../utils/api-error.js";
-import { SetAvailabilityDto, SetPeakRateDto } from "./dto/availability.dto.js";
+import {
+  BulkSetAvailabilityDto,
+  SetAvailabilityDto,
+  SetPeakRateDto,
+  UpdatePeakRateDto,
+} from "./dto/availability.dto.js";
 
 export class AvailabilityService {
   constructor(private prisma: PrismaClient) {}
@@ -22,6 +27,33 @@ export class AvailabilityService {
     });
   }
 
+  async bulkSetAvailability(
+    roomId: string,
+    tenantId: string,
+    data: BulkSetAvailabilityDto,
+  ) {
+    await this.verifyRoomOwner(roomId, tenantId);
+
+    const results = await this.prisma.$transaction(
+      data.items.map((item) =>
+        this.prisma.roomAvailability.upsert({
+          where: { roomId_date: { roomId, date: new Date(item.date) } },
+          update: { isAvailable: item.isAvailable },
+          create: {
+            roomId,
+            date: new Date(item.date),
+            isAvailable: item.isAvailable,
+          },
+        }),
+      ),
+    );
+
+    return {
+      message: `Successfully updated ${results.length} availability entries`,
+      count: results.length,
+    };
+  }
+
   private async verifyRoomOwner(roomId: string, tenantId: string) {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
@@ -40,11 +72,47 @@ export class AvailabilityService {
     await this.verifyRoomOwner(roomId, tenantId);
     return this.prisma.peakSeasonRate.create({
       data: {
-        ...data,
+        roomId,
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
+        priceType: data.priceType as any,
+        value: data.value,
       },
     });
+  }
+
+  async updatePeakRate(id: string, tenantId: string, data: UpdatePeakRateDto) {
+    const rate = await this.prisma.peakSeasonRate.findUnique({
+      where: { id },
+      include: { room: { include: { property: true } } },
+    });
+    if (!rate) throw new ApiError("Peak rate not found", 404);
+    if (rate.room.property.tenantId !== tenantId)
+      throw new ApiError("Unauthorized", 403);
+
+    const updateData: any = {};
+    if (data.startDate) updateData.startDate = new Date(data.startDate);
+    if (data.endDate) updateData.endDate = new Date(data.endDate);
+    if (data.priceType) updateData.priceType = data.priceType;
+    if (data.value !== undefined) updateData.value = data.value;
+
+    return this.prisma.peakSeasonRate.update({
+      where: { id },
+      data: updateData,
+    });
+  }
+
+  async deletePeakRate(id: string, tenantId: string) {
+    const rate = await this.prisma.peakSeasonRate.findUnique({
+      where: { id },
+      include: { room: { include: { property: true } } },
+    });
+    if (!rate) throw new ApiError("Peak rate not found", 404);
+    if (rate.room.property.tenantId !== tenantId)
+      throw new ApiError("Unauthorized", 403);
+
+    await this.prisma.peakSeasonRate.delete({ where: { id } });
+    return { message: "Peak rate deleted successfully" };
   }
 
   async calculateTotalPrice(roomId: string, startDate: Date, endDate: Date) {

@@ -6,21 +6,45 @@ import { ApiError } from "../../utils/api-error.js";
 import {
   CreatePropertyDto,
   GetPropertiesQueryDto,
+  GetTenantPropertiesQueryDto,
   UpdatePropertyDto,
 } from "./dto/property.dto.js";
 
+import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
+
 export class PropertyService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
   private generateSlug(name: string) {
     return name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now();
   }
 
   async createProperty(tenantId: string, data: CreatePropertyDto) {
+    const { imageUrl, ...propertyData } = data;
     const slug = this.generateSlug(data.name);
-    return this.prisma.property.create({
-      data: { ...data, tenantId, slug },
-      include: { category: true, images: true },
+
+    return this.prisma.$transaction(async (tx) => {
+      const property = await tx.property.create({
+        data: { ...propertyData, tenantId, slug },
+        include: { category: true },
+      });
+
+      if (imageUrl) {
+        await tx.propertyImage.create({
+          data: {
+            propertyId: property.id,
+            imageUrl,
+          },
+        });
+      }
+
+      return tx.property.findUnique({
+        where: { id: property.id },
+        include: { category: true, images: true },
+      });
     });
   }
 
@@ -241,21 +265,70 @@ export class PropertyService {
   }
 
   async updateProperty(id: string, tenantId: string, data: UpdatePropertyDto) {
-    const property = await this.prisma.property.findUnique({ where: { id } });
+    const property = await this.prisma.property.findUnique({
+      where: { id },
+      include: { images: true },
+    });
     if (!property) throw new ApiError("Property not found", 404);
     if (property.tenantId !== tenantId) throw new ApiError("Unauthorized", 403);
 
-    return this.prisma.property.update({
-      where: { id },
-      data,
-      include: { category: true, images: true },
+    const { imageUrl, ...updateData } = data;
+
+    return this.prisma.$transaction(async (tx) => {
+      // Update property basic info
+      await tx.property.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Handle image replacement
+      if (imageUrl) {
+        // Delete old image from cloudinary if exists
+        const oldImage = property.images[0];
+        if (oldImage) {
+          try {
+            await this.cloudinaryService.removeByUrl(oldImage.imageUrl);
+          } catch (e) {
+            console.error(
+              "Failed to delete existing image from cloudinary:",
+              e,
+            );
+          }
+          await tx.propertyImage.delete({ where: { id: oldImage.id } });
+        }
+
+        // Add new image
+        await tx.propertyImage.create({
+          data: { propertyId: id, imageUrl },
+        });
+      }
+
+      return tx.property.findUnique({
+        where: { id },
+        include: { category: true, images: true },
+      });
     });
   }
 
   async deleteProperty(id: string, tenantId: string) {
-    const property = await this.prisma.property.findUnique({ where: { id } });
+    const property = await this.prisma.property.findUnique({
+      where: { id },
+      include: { images: true },
+    });
     if (!property) throw new ApiError("Property not found", 404);
     if (property.tenantId !== tenantId) throw new ApiError("Unauthorized", 403);
+
+    // Delete image from cloudinary if it exists
+    if (property.images.length > 0) {
+      try {
+        await this.cloudinaryService.removeByUrl(property.images[0].imageUrl);
+      } catch (e) {
+        console.error(
+          "Failed to delete property image during property deletion:",
+          e,
+        );
+      }
+    }
 
     await this.prisma.property.delete({ where: { id } });
     return { message: "Property deleted successfully" };
@@ -263,6 +336,55 @@ export class PropertyService {
 
   async getCategories() {
     return this.prisma.propertyCategory.findMany();
+  }
+
+  async getTenantProperties(
+    tenantId: string,
+    query: GetTenantPropertiesQueryDto,
+  ) {
+    const { page, take, search, categoryId, sortBy, sortOrder } = query;
+
+    const where: Prisma.PropertyWhereInput = {
+      tenantId,
+      ...(search
+        ? { name: { contains: search, mode: "insensitive" as const } }
+        : {}),
+      ...(categoryId ? { categoryId } : {}),
+    };
+
+    let orderBy: any = {};
+    if (sortBy === "name") {
+      orderBy = { name: sortOrder };
+    } else {
+      orderBy = { createdAt: sortOrder };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.property.findMany({
+        where,
+        take,
+        skip: (page - 1) * take,
+        orderBy,
+        include: {
+          category: true,
+          images: true,
+          _count: {
+            select: { rooms: true, reviews: true, reservations: true },
+          },
+        },
+      }),
+      this.prisma.property.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        take,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / take)),
+      },
+    };
   }
 
   async getLocations(search?: string) {

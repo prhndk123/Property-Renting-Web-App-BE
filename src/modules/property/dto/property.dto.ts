@@ -30,6 +30,10 @@ export class CreatePropertyDto {
   @IsNotEmpty()
   @IsUUID()
   categoryId!: string;
+
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }
 
 export class UpdatePropertyDto {
@@ -52,6 +56,10 @@ export class UpdatePropertyDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }
 
 export class GetPropertiesQueryDto {
@@ -101,4 +109,34 @@ export class GetPropertiesQueryDto {
   @IsNumber()
   @Min(1)
   capacity?: number;
+}
+
+export class GetTenantPropertiesQueryDto {
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
+  @Min(1)
+  page: number = 1;
+
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
+  @Min(1)
+  take: number = 10;
+
+  @IsOptional()
+  @IsString()
+  sortBy: string = "createdAt";
+
+  @IsOptional()
+  @IsEnum(["asc", "desc"])
+  sortOrder: "asc" | "desc" = "desc";
 }

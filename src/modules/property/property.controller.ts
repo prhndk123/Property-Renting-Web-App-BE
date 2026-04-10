@@ -1,16 +1,26 @@
 import { Request, Response } from "express";
 import { PropertyService } from "./property.service.js";
 import { AuthRequest } from "../../middlewares/auth.middleware.js";
+import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
 
 export class PropertyController {
-  constructor(private propertyService: PropertyService) {}
+  constructor(
+    private propertyService: PropertyService,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
   createProperty = async (req: Request, res: Response) => {
     const tenantId = (req as AuthRequest).user?.id!;
-    const result = await this.propertyService.createProperty(
-      tenantId,
-      req.body,
-    );
+    let imageUrl: string | undefined;
+
+    if (req.file) {
+      const uploadResult = await this.cloudinaryService.upload(req.file);
+      imageUrl = uploadResult.secure_url;
+    }
+
+    const payload = { ...req.body, imageUrl };
+
+    const result = await this.propertyService.createProperty(tenantId, payload);
     res.status(201).send(result);
   };
 
@@ -35,10 +45,22 @@ export class PropertyController {
 
   updateProperty = async (req: Request, res: Response) => {
     const tenantId = (req as AuthRequest).user?.id!;
+    let imageUrl: string | undefined;
+
+    if (req.file) {
+      const uploadResult = await this.cloudinaryService.upload(req.file);
+      imageUrl = uploadResult.secure_url;
+    }
+
+    const payload = { ...req.body };
+    if (imageUrl) {
+      payload.imageUrl = imageUrl;
+    }
+
     const result = await this.propertyService.updateProperty(
       req.params.id as string,
       tenantId,
-      req.body,
+      payload,
     );
     res.status(200).send(result);
   };
@@ -48,6 +70,15 @@ export class PropertyController {
     const result = await this.propertyService.deleteProperty(
       req.params.id as string,
       tenantId,
+    );
+    res.status(200).send(result);
+  };
+
+  getTenantProperties = async (req: Request, res: Response) => {
+    const tenantId = (req as AuthRequest).user?.id!;
+    const result = await this.propertyService.getTenantProperties(
+      tenantId,
+      req.query as any,
     );
     res.status(200).send(result);
   };
