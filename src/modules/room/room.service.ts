@@ -8,15 +8,38 @@ import {
   GetRoomsQueryDto,
   UpdateRoomDto,
 } from "./dto/room.dto.js";
+import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
 
 export class RoomService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
   async createRoom(tenantId: string, data: CreateRoomDto) {
     await this.verifyPropertyOwner(data.propertyId, tenantId);
-    return this.prisma.room.create({
-      data,
-      include: { images: true },
+
+    const { imageUrls, ...roomData } = data;
+
+    return this.prisma.$transaction(async (tx) => {
+      const room = await tx.room.create({
+        data: roomData,
+        include: { images: true },
+      });
+
+      if (imageUrls && imageUrls.length > 0) {
+        await tx.roomImage.createMany({
+          data: imageUrls.map((url) => ({
+            roomId: room.id,
+            imageUrl: url,
+          })),
+        });
+      }
+
+      return tx.room.findUnique({
+        where: { id: room.id },
+        include: { images: true },
+      });
     });
   }
 
@@ -46,27 +69,73 @@ export class RoomService {
   async updateRoom(id: string, tenantId: string, data: UpdateRoomDto) {
     const room = await this.prisma.room.findUnique({
       where: { id },
-      include: { property: true },
+      include: { property: true, images: true },
     });
     if (!room) throw new ApiError("Room not found", 404);
     if (room.property.tenantId !== tenantId)
       throw new ApiError("Unauthorized", 403);
 
-    return this.prisma.room.update({
-      where: { id },
-      data,
-      include: { images: true },
+    const { imageUrls, removedImageIds, ...updateData } = data;
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.room.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Handle removed images
+      if (removedImageIds && removedImageIds.length > 0) {
+        const imagesToRemove = room.images.filter((img) =>
+          removedImageIds.includes(img.id),
+        );
+
+        for (const img of imagesToRemove) {
+          try {
+            await this.cloudinaryService.removeByUrl(img.imageUrl);
+          } catch (e) {
+            console.error("Failed to delete room image from cloudinary:", e);
+          }
+        }
+
+        await tx.roomImage.deleteMany({
+          where: { id: { in: removedImageIds } },
+        });
+      }
+
+      // Add new images
+      if (imageUrls && imageUrls.length > 0) {
+        await tx.roomImage.createMany({
+          data: imageUrls.map((url) => ({
+            roomId: id,
+            imageUrl: url,
+          })),
+        });
+      }
+
+      return tx.room.findUnique({
+        where: { id },
+        include: { images: true },
+      });
     });
   }
 
   async deleteRoom(id: string, tenantId: string) {
     const room = await this.prisma.room.findUnique({
       where: { id },
-      include: { property: true },
+      include: { property: true, images: true },
     });
     if (!room) throw new ApiError("Room not found", 404);
     if (room.property.tenantId !== tenantId)
       throw new ApiError("Unauthorized", 403);
+
+    // Delete all images from cloudinary
+    for (const img of room.images) {
+      try {
+        await this.cloudinaryService.removeByUrl(img.imageUrl);
+      } catch (e) {
+        console.error("Failed to delete room image during room deletion:", e);
+      }
+    }
 
     await this.prisma.room.delete({ where: { id } });
     return { message: "Room deleted successfully" };

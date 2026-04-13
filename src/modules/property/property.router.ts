@@ -49,13 +49,13 @@ export class PropertyRouter {
 
     this.router.post(
       "/",
-      uploader.single("image"),
+      uploader.array("images", 5),
       this.validationMiddleware.validateBody(CreatePropertyDto),
       this.propertyController.createProperty,
     );
     this.router.patch(
       "/:id",
-      uploader.single("image"),
+      uploader.array("images", 5),
       this.validationMiddleware.validateBody(UpdatePropertyDto),
       this.propertyController.updateProperty,
     );

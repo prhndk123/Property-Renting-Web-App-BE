@@ -23,7 +23,7 @@ export class PropertyService {
   }
 
   async createProperty(tenantId: string, data: CreatePropertyDto) {
-    const { imageUrl, ...propertyData } = data;
+    const { imageUrls, ...propertyData } = data;
     const slug = this.generateSlug(data.name);
 
     return this.prisma.$transaction(async (tx) => {
@@ -32,12 +32,12 @@ export class PropertyService {
         include: { category: true },
       });
 
-      if (imageUrl) {
-        await tx.propertyImage.create({
-          data: {
+      if (imageUrls && imageUrls.length > 0) {
+        await tx.propertyImage.createMany({
+          data: imageUrls.map((url) => ({
             propertyId: property.id,
-            imageUrl,
-          },
+            imageUrl: url,
+          })),
         });
       }
 
@@ -272,7 +272,7 @@ export class PropertyService {
     if (!property) throw new ApiError("Property not found", 404);
     if (property.tenantId !== tenantId) throw new ApiError("Unauthorized", 403);
 
-    const { imageUrl, ...updateData } = data;
+    const { imageUrls, removedImageIds, ...updateData } = data;
 
     return this.prisma.$transaction(async (tx) => {
       // Update property basic info
@@ -281,25 +281,32 @@ export class PropertyService {
         data: updateData,
       });
 
-      // Handle image replacement
-      if (imageUrl) {
-        // Delete old image from cloudinary if exists
-        const oldImage = property.images[0];
-        if (oldImage) {
+      // Handle removed images
+      if (removedImageIds && removedImageIds.length > 0) {
+        const imagesToRemove = property.images.filter((img) =>
+          removedImageIds.includes(img.id),
+        );
+
+        for (const img of imagesToRemove) {
           try {
-            await this.cloudinaryService.removeByUrl(oldImage.imageUrl);
+            await this.cloudinaryService.removeByUrl(img.imageUrl);
           } catch (e) {
-            console.error(
-              "Failed to delete existing image from cloudinary:",
-              e,
-            );
+            console.error("Failed to delete image from cloudinary:", e);
           }
-          await tx.propertyImage.delete({ where: { id: oldImage.id } });
         }
 
-        // Add new image
-        await tx.propertyImage.create({
-          data: { propertyId: id, imageUrl },
+        await tx.propertyImage.deleteMany({
+          where: { id: { in: removedImageIds } },
+        });
+      }
+
+      // Add new images
+      if (imageUrls && imageUrls.length > 0) {
+        await tx.propertyImage.createMany({
+          data: imageUrls.map((url) => ({
+            propertyId: id,
+            imageUrl: url,
+          })),
         });
       }
 
@@ -318,10 +325,10 @@ export class PropertyService {
     if (!property) throw new ApiError("Property not found", 404);
     if (property.tenantId !== tenantId) throw new ApiError("Unauthorized", 403);
 
-    // Delete image from cloudinary if it exists
-    if (property.images.length > 0) {
+    // Delete all images from cloudinary
+    for (const img of property.images) {
       try {
-        await this.cloudinaryService.removeByUrl(property.images[0].imageUrl);
+        await this.cloudinaryService.removeByUrl(img.imageUrl);
       } catch (e) {
         console.error(
           "Failed to delete property image during property deletion:",
