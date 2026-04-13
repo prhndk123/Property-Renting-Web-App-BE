@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -32,8 +33,9 @@ export class CreatePropertyDto {
   categoryId!: string;
 
   @IsOptional()
-  @IsString()
-  imageUrl?: string;
+  @IsArray()
+  @IsString({ each: true })
+  imageUrls?: string[];
 }
 
 export class UpdatePropertyDto {
@@ -58,8 +60,17 @@ export class UpdatePropertyDto {
   categoryId?: string;
 
   @IsOptional()
-  @IsString()
-  imageUrl?: string;
+  @IsArray()
+  @IsString({ each: true })
+  imageUrls?: string[];
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === "string" ? JSON.parse(value) : value,
+  )
+  @IsArray()
+  @IsString({ each: true })
+  removedImageIds?: string[];
 }
 
 export class GetPropertiesQueryDto {

@@ -89,7 +89,7 @@ export class App {
     const authService = new AuthService(prisma, mailService);
     const userService = new UserService(prisma, cloudinaryService, mailService);
     const propertyService = new PropertyService(prisma, cloudinaryService);
-    const roomService = new RoomService(prisma);
+    const roomService = new RoomService(prisma, cloudinaryService);
     const availabilityService = new AvailabilityService(prisma);
     const reservationService = new ReservationService(
       prisma,
@@ -112,7 +112,7 @@ export class App {
       propertyService,
       cloudinaryService,
     );
-    const roomController = new RoomController(roomService);
+    const roomController = new RoomController(roomService, cloudinaryService);
     const availabilityController = new AvailabilityController(
       availabilityService,
     );

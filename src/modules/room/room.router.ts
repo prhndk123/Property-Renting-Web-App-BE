@@ -3,6 +3,7 @@ import { RoomController } from "./room.controller.js";
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
 import { UserRole } from "../../types/user-role.js";
 import { ValidationMiddleware } from "../../middlewares/validation.middleware.js";
+import { uploader } from "../../middlewares/uploader.middleware.js";
 import {
   CreateRoomDto,
   GetRoomsQueryDto,
@@ -33,11 +34,13 @@ export class RoomRouter {
 
     this.router.post(
       "/",
+      uploader.array("images", 5),
       this.validationMiddleware.validateBody(CreateRoomDto),
       this.roomController.createRoom,
     );
     this.router.patch(
       "/:id",
+      uploader.array("images", 5),
       this.validationMiddleware.validateBody(UpdateRoomDto),
       this.roomController.updateRoom,
     );

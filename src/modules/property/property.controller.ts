@@ -11,14 +11,16 @@ export class PropertyController {
 
   createProperty = async (req: Request, res: Response) => {
     const tenantId = (req as AuthRequest).user?.id!;
-    let imageUrl: string | undefined;
+    const imageUrls: string[] = [];
 
-    if (req.file) {
-      const uploadResult = await this.cloudinaryService.upload(req.file);
-      imageUrl = uploadResult.secure_url;
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        const uploadResult = await this.cloudinaryService.upload(file);
+        imageUrls.push(uploadResult.secure_url);
+      }
     }
 
-    const payload = { ...req.body, imageUrl };
+    const payload = { ...req.body, imageUrls };
 
     const result = await this.propertyService.createProperty(tenantId, payload);
     res.status(201).send(result);
@@ -45,16 +47,18 @@ export class PropertyController {
 
   updateProperty = async (req: Request, res: Response) => {
     const tenantId = (req as AuthRequest).user?.id!;
-    let imageUrl: string | undefined;
+    const imageUrls: string[] = [];
 
-    if (req.file) {
-      const uploadResult = await this.cloudinaryService.upload(req.file);
-      imageUrl = uploadResult.secure_url;
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        const uploadResult = await this.cloudinaryService.upload(file);
+        imageUrls.push(uploadResult.secure_url);
+      }
     }
 
     const payload = { ...req.body };
-    if (imageUrl) {
-      payload.imageUrl = imageUrl;
+    if (imageUrls.length > 0) {
+      payload.imageUrls = imageUrls;
     }
 
     const result = await this.propertyService.updateProperty(
