@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -22,14 +23,21 @@ export class CreateRoomDto {
   description!: string;
 
   @IsNotEmpty()
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @Min(1)
   capacity!: number;
 
   @IsNotEmpty()
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @Min(0)
   basePrice!: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imageUrls?: string[];
 }
 
 export class UpdateRoomDto {
@@ -42,14 +50,29 @@ export class UpdateRoomDto {
   description?: string;
 
   @IsOptional()
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @Min(1)
   capacity?: number;
 
   @IsOptional()
+  @Transform(({ value }) => Number(value))
   @IsNumber()
   @Min(0)
   basePrice?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imageUrls?: string[];
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    typeof value === "string" ? JSON.parse(value) : value,
+  )
+  @IsArray()
+  @IsString({ each: true })
+  removedImageIds?: string[];
 }
 
 export class GetRoomsQueryDto {
