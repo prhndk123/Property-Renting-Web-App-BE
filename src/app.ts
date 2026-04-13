@@ -19,6 +19,7 @@ import { AvailabilityService } from "./modules/availability/availability.service
 import { ReservationService } from "./modules/reservation/reservation.service.js";
 import { ReviewService } from "./modules/review/review.service.js";
 import { DashboardService } from "./modules/dashboard/dashboard.service.js";
+import { CategoryService } from "./modules/category/category.service.js";
 import { MailService } from "./modules/mail/mail.service.js";
 import { CloudinaryService } from "./modules/cloudinary/cloudinary.service.js";
 import { XenditService } from "./modules/payment/xendit.service.js";
@@ -34,6 +35,7 @@ import { ReservationController } from "./modules/reservation/reservation.control
 import { ReviewController } from "./modules/review/review.controller.js";
 import { DashboardController } from "./modules/dashboard/dashboard.controller.js";
 import { MediaController } from "./modules/media/media.controller.js";
+import { CategoryController } from "./modules/category/category.controller.js";
 
 // Routers
 import { AuthRouter } from "./modules/auth/auth.router.js";
@@ -45,6 +47,7 @@ import { ReservationRouter } from "./modules/reservation/reservation.router.js";
 import { ReviewRouter } from "./modules/review/review.router.js";
 import { DashboardRouter } from "./modules/dashboard/dashboard.router.js";
 import { MediaRouter } from "./modules/media/media.router.js";
+import { CategoryRouter } from "./modules/category/category.router.js";
 
 // Middlewares
 import { AuthMiddleware } from "./middlewares/auth.middleware.js";
@@ -85,7 +88,7 @@ export class App {
     // ===== CORE SERVICES =====
     const authService = new AuthService(prisma, mailService);
     const userService = new UserService(prisma, cloudinaryService, mailService);
-    const propertyService = new PropertyService(prisma);
+    const propertyService = new PropertyService(prisma, cloudinaryService);
     const roomService = new RoomService(prisma);
     const availabilityService = new AvailabilityService(prisma);
     const reservationService = new ReservationService(
@@ -96,6 +99,7 @@ export class App {
     );
     const reviewService = new ReviewService(prisma);
     const dashboardService = new DashboardService(prisma);
+    const categoryService = new CategoryService(prisma);
 
     // ===== CRON =====
     const cronService = new CronService(prisma, mailService);
@@ -104,7 +108,10 @@ export class App {
     // ===== CONTROLLERS =====
     const authController = new AuthController(authService);
     const userController = new UserController(userService);
-    const propertyController = new PropertyController(propertyService);
+    const propertyController = new PropertyController(
+      propertyService,
+      cloudinaryService,
+    );
     const roomController = new RoomController(roomService);
     const availabilityController = new AvailabilityController(
       availabilityService,
@@ -113,6 +120,7 @@ export class App {
     const reviewController = new ReviewController(reviewService);
     const dashboardController = new DashboardController(dashboardService);
     const mediaController = new MediaController(cloudinaryService);
+    const categoryController = new CategoryController(categoryService);
 
     // ===== MIDDLEWARES =====
     const authMiddleware = new AuthMiddleware();
@@ -160,6 +168,11 @@ export class App {
       validationMiddleware,
     );
     const mediaRouter = new MediaRouter(mediaController, authMiddleware);
+    const categoryRouter = new CategoryRouter(
+      categoryController,
+      authMiddleware,
+      validationMiddleware,
+    );
 
     // ===== ROUTE REGISTRATION =====
     this.app.use("/api/auth", authRouter.getRouter());
@@ -171,6 +184,7 @@ export class App {
     this.app.use("/api/reviews", reviewRouter.getRouter());
     this.app.use("/api/dashboard", dashboardRouter.getRouter());
     this.app.use("/api/media", mediaRouter.getRouter());
+    this.app.use("/api/categories", categoryRouter.getRouter());
 
     // Tambahkan route webhook sesuai dengan yang disetting di Xendit
     this.app.post("/api/webhooks/xendit", reservationController.xenditWebhook);

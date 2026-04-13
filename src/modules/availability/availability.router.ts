@@ -3,7 +3,12 @@ import { AvailabilityController } from "./availability.controller.js";
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
 import { UserRole } from "../../types/user-role.js";
 import { ValidationMiddleware } from "../../middlewares/validation.middleware.js";
-import { SetAvailabilityDto, SetPeakRateDto } from "./dto/availability.dto.js";
+import {
+  BulkSetAvailabilityDto,
+  SetAvailabilityDto,
+  SetPeakRateDto,
+  UpdatePeakRateDto,
+} from "./dto/availability.dto.js";
 
 export class AvailabilityRouter {
   private router: Router;
@@ -17,6 +22,7 @@ export class AvailabilityRouter {
   }
 
   private initRoutes = () => {
+    // Public routes
     this.router.get("/:roomId", this.availabilityController.getAvailability);
     this.router.get(
       "/:roomId/peak-rates",
@@ -27,6 +33,7 @@ export class AvailabilityRouter {
       this.availabilityController.calculateTotalPrice,
     );
 
+    // Protected routes (tenant only)
     this.router.use(this.authMiddleware.verifyToken(process.env.JWT_SECRET!));
     this.router.use(this.authMiddleware.verifyRole([UserRole.TENANT]));
 
@@ -36,9 +43,23 @@ export class AvailabilityRouter {
       this.availabilityController.setRoomAvailability,
     );
     this.router.post(
+      "/:roomId/bulk",
+      this.validationMiddleware.validateBody(BulkSetAvailabilityDto),
+      this.availabilityController.bulkSetAvailability,
+    );
+    this.router.post(
       "/:roomId/peak-rates",
       this.validationMiddleware.validateBody(SetPeakRateDto),
       this.availabilityController.setPeakSeasonRate,
+    );
+    this.router.patch(
+      "/peak-rates/:id",
+      this.validationMiddleware.validateBody(UpdatePeakRateDto),
+      this.availabilityController.updatePeakRate,
+    );
+    this.router.delete(
+      "/peak-rates/:id",
+      this.availabilityController.deletePeakRate,
     );
   };
 

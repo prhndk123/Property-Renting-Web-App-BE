@@ -15,6 +15,16 @@ export class AvailabilityController {
     res.status(200).send(result);
   };
 
+  bulkSetAvailability = async (req: Request, res: Response) => {
+    const tenantId = (req as AuthRequest).user?.id!;
+    const result = await this.availabilityService.bulkSetAvailability(
+      req.params.roomId as string,
+      tenantId,
+      req.body,
+    );
+    res.status(200).send(result);
+  };
+
   setPeakSeasonRate = async (req: Request, res: Response) => {
     const tenantId = (req as AuthRequest).user?.id!;
     const result = await this.availabilityService.setPeakSeasonRate(
@@ -23,6 +33,25 @@ export class AvailabilityController {
       req.body,
     );
     res.status(201).send(result);
+  };
+
+  updatePeakRate = async (req: Request, res: Response) => {
+    const tenantId = (req as AuthRequest).user?.id!;
+    const result = await this.availabilityService.updatePeakRate(
+      req.params.id as string,
+      tenantId,
+      req.body,
+    );
+    res.status(200).send(result);
+  };
+
+  deletePeakRate = async (req: Request, res: Response) => {
+    const tenantId = (req as AuthRequest).user?.id!;
+    const result = await this.availabilityService.deletePeakRate(
+      req.params.id as string,
+      tenantId,
+    );
+    res.status(200).send(result);
   };
 
   calculateTotalPrice = async (req: Request, res: Response) => {

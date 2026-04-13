@@ -58,6 +58,7 @@ model User {
   emailVerifications EmailVerification[]
   passwordResets     PasswordReset[]
   refreshToken       RefreshToken?
+  categories         PropertyCategory[] @relation("TenantCategories")
   properties         Property[] // Properties owned by tenant
   reservations       Reservation[] // Reservations made by user
   reviews            Review[]
@@ -101,12 +102,16 @@ model PasswordReset {
 
 model PropertyCategory {
   id        String   @id @default(uuid()) @db.Uuid
-  name      String   @unique
+  tenantId  String   @db.Uuid
+  name      String
   createdAt DateTime @default(now())
 
   // Relations
+  tenant     User       @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
   properties Property[]
 
+  @@unique([name, tenantId])
+  @@index([tenantId])
   @@map("property_categories")
 }
 
