@@ -1,47 +1,43 @@
+import * as dotenv from "dotenv";
 import { PrismaClient } from "../generated/prisma/client/index.js";
 
-async function seed() {
-  const prisma = new PrismaClient();
+dotenv.config();
+
+// Prisma automatically looks for DATABASE_URL in process.env
+// if it's defined in your schema.prisma.
+const prisma = new PrismaClient();
+
+async function addDefaultCategories() {
+  const tenantId = "3679150d-7f66-4609-9514-27c122c34007"; // Zaenal Arifin
+
+  const categories = ["Villa", "Apartment", "Hotel", "Guest House", "Cabin"];
+
   try {
-    const tenants = await prisma.user.findMany({
-      where: { role: "TENANT" },
-    });
+    console.log(`Adding default categories for tenant ${tenantId}...`);
 
-    if (tenants.length === 0) {
-      console.log("No tenants found. Please register as a tenant first.");
-      return;
+    for (const name of categories) {
+      await prisma.propertyCategory.upsert({
+        where: {
+          name_tenantId: {
+            name,
+            tenantId,
+          },
+        },
+        update: {},
+        create: {
+          name,
+          tenantId,
+        },
+      });
+      console.log(`- Added/Verified: ${name}`);
     }
 
-    const categories = ["Hotel", "Villa", "Apartment", "Resort", "Guesthouse"];
-
-    for (const tenant of tenants) {
-      console.log(
-        `Seeding categories for tenant: ${tenant.name} (${tenant.email})...`,
-      );
-
-      for (const catName of categories) {
-        await prisma.propertyCategory.upsert({
-          where: {
-            name_tenantId: {
-              name: catName,
-              tenantId: tenant.id,
-            },
-          },
-          update: {},
-          create: {
-            name: catName,
-            tenantId: tenant.id,
-          },
-        });
-      }
-    }
-
-    console.log("Successfully seeded categories for all tenants.");
+    console.log("Done!");
   } catch (error) {
-    console.error("Error seeding categories:", error);
+    console.error("Error adding categories:", error);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-seed();
+addDefaultCategories();

@@ -1,14 +1,34 @@
+# services:
+#   postgres:
+#     image: postgres:18
+#     container_name: postgres_finpro
+#     restart: always
+#     volumes:
+#       - ./docker/postgres:/var/lib/postgresql/data
+#     ports:
+#       - "6543:5432"
+#     environment:
+#       POSTGRES_PASSWORD: admin
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+#       interval: 5s
+#       timeout: 2s
+#       retries: 20
+version: '3.8'
+
 services:
   postgres:
     image: postgres:18
     container_name: postgres_finpro
     restart: always
     volumes:
-      - ./docker/postgres:/var/lib/postgresql/18/docker
+      - ./docker/postgres:/var/lib/postgresql/data
     ports:
       - "6543:5432"
     environment:
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
+      POSTGRES_DB: finpro_db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 5s

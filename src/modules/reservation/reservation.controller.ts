@@ -13,10 +13,21 @@ export class ReservationController {
 
   getReservations = async (req: Request, res: Response) => {
     const user = (req as AuthRequest).user!;
+    console.log("[ReservationController] getReservations hit by user:", {
+      id: user.id,
+      role: user.role,
+    });
+    console.log("[ReservationController] Query params:", req.query);
+
     const result = await this.svc.getReservations(
       user.id,
-      user.role,
+      user.role as string,
       req.query as any,
+    );
+
+    console.log(
+      "[ReservationController] Found records count:",
+      result.data.length,
     );
     res.status(200).send(result);
   };
