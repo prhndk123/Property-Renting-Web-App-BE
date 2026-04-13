@@ -54,7 +54,7 @@ export class PropertyService {
       take,
       sortBy,
       sortOrder,
-      city,
+      destination,
       categoryId,
       search,
       startDate,
@@ -104,7 +104,9 @@ export class PropertyService {
     // ── Build WHERE clause ──
     // Only show properties that have at least one room (i.e., some availability)
     const where: Prisma.PropertyWhereInput = {
-      city: city ? { contains: city, mode: "insensitive" } : undefined,
+      city: destination
+        ? { contains: destination, mode: "insensitive" }
+        : undefined,
       name: search ? { contains: search, mode: "insensitive" } : undefined,
       ...categoryWhere,
       // Must have at least one room
@@ -236,13 +238,34 @@ export class PropertyService {
     };
   }
 
-  async getPropertyBySlug(slug: string) {
+  async getPropertyBySlug(slug: string, query?: any) {
+    // If slug is a UUID, use getPropertyById instead
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        slug,
+      );
+    if (isUuid) return this.getPropertyById(slug, query);
+
+    const { startDate, endDate } = query || {};
+    const roomFilter: Prisma.RoomWhereInput = {};
+    if (startDate && endDate) {
+      roomFilter.availability = {
+        none: {
+          date: { gte: new Date(startDate), lt: new Date(endDate) },
+          isAvailable: false,
+        },
+      };
+    }
+
     const property = await this.prisma.property.findUnique({
       where: { slug },
       include: {
         category: true,
         images: true,
-        rooms: { include: { images: true } },
+        rooms: {
+          where: roomFilter,
+          include: { images: true, availability: true },
+        },
         tenant: { select: { name: true, profilePicture: true } },
       },
     });
@@ -250,13 +273,27 @@ export class PropertyService {
     return property;
   }
 
-  async getPropertyById(id: string) {
+  async getPropertyById(id: string, query?: any) {
+    const { startDate, endDate } = query || {};
+    const roomFilter: Prisma.RoomWhereInput = {};
+    if (startDate && endDate) {
+      roomFilter.availability = {
+        none: {
+          date: { gte: new Date(startDate), lt: new Date(endDate) },
+          isAvailable: false,
+        },
+      };
+    }
+
     const property = await this.prisma.property.findUnique({
       where: { id },
       include: {
         category: true,
         images: true,
-        rooms: { include: { images: true } },
+        rooms: {
+          where: roomFilter,
+          include: { images: true, availability: true },
+        },
         tenant: { select: { name: true, profilePicture: true } },
       },
     });

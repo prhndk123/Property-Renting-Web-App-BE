@@ -57,9 +57,14 @@ export class ReviewService {
     });
   }
 
-  async getReviews(query: GetReviewsQueryDto) {
-    const { page, take, propertyId, userId } = query;
+  async getReviews(query: GetReviewsQueryDto & { tenantId?: string }) {
+    const { page, take, propertyId, userId, tenantId } = query;
     const where: Prisma.ReviewWhereInput = { propertyId, userId };
+
+    if (tenantId) {
+      where.property = { tenantId };
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.review.findMany({
         where,

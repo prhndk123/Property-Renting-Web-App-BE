@@ -34,6 +34,7 @@ export class PropertyController {
   getPropertyBySlug = async (req: Request, res: Response) => {
     const result = await this.propertyService.getPropertyBySlug(
       req.params.slug as string,
+      req.query as any,
     );
     res.status(200).send(result);
   };
@@ -41,6 +42,7 @@ export class PropertyController {
   getPropertyById = async (req: Request, res: Response) => {
     const result = await this.propertyService.getPropertyById(
       req.params.id as string,
+      req.query as any,
     );
     res.status(200).send(result);
   };

@@ -42,6 +42,10 @@ export class GetReviewsQueryDto {
   userId?: string;
 
   @IsOptional()
+  @IsUUID()
+  tenantId?: string;
+
+  @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
   @Min(1)

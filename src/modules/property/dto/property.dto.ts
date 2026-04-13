@@ -80,7 +80,7 @@ export class GetPropertiesQueryDto {
 
   @IsOptional()
   @IsString()
-  city?: string;
+  destination?: string;
 
   /** Comma-separated category names or UUIDs, e.g. "hotel,villa" or single UUID */
   @IsOptional()

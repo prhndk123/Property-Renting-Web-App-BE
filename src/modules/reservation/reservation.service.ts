@@ -39,7 +39,6 @@ export class ReservationService {
         info,
       );
       await this.createResRoom(tx, res.id, roomId, info);
-      await this.createResPayment(tx, res.id, paymentMethod);
       const invoiceUrl = await this.handleGateway(
         tx,
         paymentMethod,
@@ -47,6 +46,15 @@ export class ReservationService {
         res.id,
         info,
       );
+      await this.createResPayment(tx, res.id, paymentMethod, invoiceUrl);
+
+      // Block dates immediately on WAITING_PAYMENT
+      await this.toggleDatesAvailability(
+        tx,
+        { ...res, reservationRooms: [{ roomId }] },
+        false,
+      );
+
       return { ...res, invoiceUrl };
     });
   }
@@ -91,9 +99,15 @@ export class ReservationService {
     tx: any,
     reservationId: string,
     paymentMethod: string,
+    invoiceUrl?: string | null,
   ) {
     return tx.payment.create({
-      data: { reservationId, paymentMethod, paymentStatus: "PENDING" },
+      data: {
+        reservationId,
+        paymentMethod,
+        paymentStatus: "PENDING",
+        invoiceUrl: invoiceUrl || null,
+      },
     });
   }
 
@@ -122,8 +136,20 @@ export class ReservationService {
     role: string | null,
     query: GetReservationsQueryDto,
   ) {
+    console.log(
+      "[ReservationService] getReservations for userId:",
+      userId,
+      "with role:",
+      role,
+    );
     const { page, take, sortBy, sortOrder } = query;
     const where = this.buildReservationWhere(userId, role, query);
+
+    console.log(
+      "[ReservationService] Filter where clause:",
+      JSON.stringify(where, null, 2),
+    );
+
     const [data, total] = await Promise.all([
       this.prisma.reservation.findMany({
         where,
@@ -143,8 +169,19 @@ export class ReservationService {
     query: GetReservationsQueryDto,
   ): Prisma.ReservationWhereInput {
     const { status, startDate, endDate, orderId } = query;
-    const base =
-      role === "TENANT" ? { property: { tenantId: userId } } : { userId };
+
+    // Defensive check for role casing
+    const isTenant = role?.toString().toUpperCase() === "TENANT";
+
+    const base = isTenant ? { property: { tenantId: userId } } : { userId };
+
+    console.log(
+      "[ReservationService] isTenant check:",
+      isTenant,
+      "(Actual role:",
+      role,
+      ")",
+    );
     const dateFilter: any = {};
     if (startDate) dateFilter.gte = new Date(startDate);
     if (endDate) dateFilter.lte = new Date(endDate);
@@ -159,10 +196,34 @@ export class ReservationService {
   private reservationInclude() {
     return {
       user: { select: { name: true, email: true } },
-      property: true,
+      property: {
+        include: {
+          images: true,
+        },
+      },
       reservationRooms: { include: { room: true } },
       payment: true,
     };
+  }
+
+  // ─── GET SINGLE RESERVATION ─────────────────────────────────────────
+
+  async getReservationById(resId: string, userId: string, role: string | null) {
+    const res = await this.prisma.reservation.findUnique({
+      where: { id: resId },
+      include: this.reservationInclude(),
+    });
+    if (!res) throw new ApiError("Reservation not found", 404);
+
+    // Scope check: user can only see own reservations, tenant sees their properties
+    if (role === "TENANT") {
+      if (res.property.tenantId !== userId)
+        throw new ApiError("Forbidden", 403);
+    } else {
+      if (res.userId !== userId) throw new ApiError("Not found", 404);
+    }
+
+    return res;
   }
 
   // ─── UPLOAD PAYMENT PROOF ───────────────────────────────────────────
@@ -205,7 +266,9 @@ export class ReservationService {
         where: { id: resId },
         data: { status: "CONFIRMED" },
       });
-      await this.markDatesUnavailable(tx, res);
+      // Already blocked on creation, so no need to block again,
+      // but toggleDatesAvailability is idempotent (using upsert), so it's safe.
+      await this.toggleDatesAvailability(tx, res, false);
       await this.sendConfirmationEmail(res);
       return updated;
     });
@@ -234,11 +297,15 @@ export class ReservationService {
         400,
       );
     }
-    await this.prisma.reservation.update({
-      where: { id: resId },
-      data: { status: "CANCELLED" },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.reservation.update({
+        where: { id: resId },
+        data: { status: "CANCELLED" },
+      });
+      // Release dates
+      await this.toggleDatesAvailability(tx, res, true);
+      return { message: "Reservation cancelled successfully" };
     });
-    return { message: "Reservation cancelled successfully" };
   }
 
   // ─── CANCEL ORDER (Tenant) ─────────────────────────────────────────
@@ -251,11 +318,15 @@ export class ReservationService {
         400,
       );
     }
-    await this.prisma.reservation.update({
-      where: { id: resId },
-      data: { status: "CANCELLED" },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.reservation.update({
+        where: { id: resId },
+        data: { status: "CANCELLED" },
+      });
+      // Release dates
+      await this.toggleDatesAvailability(tx, res, true);
+      return { message: "Reservation cancelled by tenant" };
     });
-    return { message: "Reservation cancelled by tenant" };
   }
 
   // ─── XENDIT WEBHOOK ────────────────────────────────────────────────
@@ -264,9 +335,19 @@ export class ReservationService {
     const { external_id, status } = payload;
     if (!external_id || status !== "PAID") return { message: "Ignored" };
 
+    // Xendit sends test webhooks with dummy IDs. Prisma will crash (500) if we pass non-UUIDs.
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(external_id)) {
+      console.log(
+        "Xendit Webhook: Ignored non-UUID external_id (likely a test webhook)",
+      );
+      return { message: "Ignored non-UUID" };
+    }
+
     const res = await this.prisma.reservation.findUnique({
       where: { id: external_id },
-      include: { property: true, reservationRooms: true, user: true },
+      include: this.reservationInclude(),
     });
     if (!res) return { message: "Reservation not found" };
     if (res.status === "CONFIRMED") return { message: "Already confirmed" };
@@ -280,7 +361,7 @@ export class ReservationService {
         where: { id: external_id },
         data: { status: "CONFIRMED" },
       });
-      await this.markDatesUnavailable(tx, res);
+      await this.toggleDatesAvailability(tx, res, false);
       await this.sendConfirmationEmail(res);
       return updated;
     });
@@ -291,6 +372,7 @@ export class ReservationService {
   private async findUserReservation(resId: string, userId: string) {
     const res = await this.prisma.reservation.findUnique({
       where: { id: resId },
+      include: { reservationRooms: true },
     });
     if (!res || res.userId !== userId) throw new ApiError("Not found", 404);
     return res;
@@ -299,26 +381,38 @@ export class ReservationService {
   private async findTenantReservation(resId: string, tenantId: string) {
     const res = await this.prisma.reservation.findUnique({
       where: { id: resId },
-      include: { property: true, reservationRooms: true, user: true },
+      include: this.reservationInclude(),
     });
     if (!res || res.property.tenantId !== tenantId)
       throw new ApiError("Forbidden", 403);
     return res;
   }
 
-  private async markDatesUnavailable(tx: any, res: any) {
+  private async toggleDatesAvailability(
+    tx: any,
+    res: any,
+    isAvailable: boolean,
+  ) {
     const nights = this.calcNights(res.checkinDate, res.checkoutDate);
-    for (const rr of res.reservationRooms) {
+
+    // Ensure reservationRooms are populated for existing records
+    const rooms = res.reservationRooms || [];
+
+    for (const rr of rooms) {
       for (let i = 0; i < nights; i++) {
         const date = new Date(res.checkinDate);
         date.setDate(date.getDate() + i);
         await tx.roomAvailability.upsert({
           where: { roomId_date: { roomId: rr.roomId, date } },
-          update: { isAvailable: false },
-          create: { roomId: rr.roomId, date, isAvailable: false },
+          update: { isAvailable },
+          create: { roomId: rr.roomId, date, isAvailable },
         });
       }
     }
+  }
+
+  private async markDatesUnavailable(tx: any, res: any) {
+    return this.toggleDatesAvailability(tx, res, false);
   }
 
   private calcNights(checkin: Date, checkout: Date) {

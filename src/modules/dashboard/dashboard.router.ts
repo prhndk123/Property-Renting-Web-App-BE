@@ -30,6 +30,12 @@ export class DashboardRouter {
       this.validationMiddleware.validateQuery(GetDashboardQueryDto),
       this.dashboardController.getAnalytics,
     );
+    this.router.get(
+      "/sales-report",
+      this.validationMiddleware.validateQuery(GetDashboardQueryDto),
+      this.dashboardController.getSalesReport,
+    );
+    this.router.get("/calendar", this.dashboardController.getPropertyCalendar);
   };
 
   getRouter = () => this.router;

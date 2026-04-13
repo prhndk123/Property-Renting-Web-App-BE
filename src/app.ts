@@ -185,6 +185,9 @@ export class App {
     this.app.use("/api/dashboard", dashboardRouter.getRouter());
     this.app.use("/api/media", mediaRouter.getRouter());
     this.app.use("/api/categories", categoryRouter.getRouter());
+
+    // Tambahkan route webhook sesuai dengan yang disetting di Xendit
+    this.app.post("/api/webhooks/xendit", reservationController.xenditWebhook);
   }
 
   private errorMiddleware() {

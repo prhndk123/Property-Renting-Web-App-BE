@@ -29,7 +29,7 @@ export class CronService {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const expired = await this.findExpiredReservations(oneHourAgo);
     for (const res of expired) {
-      await this.cancelExpiredReservation(res.id);
+      await this.cancelExpiredReservation(res);
     }
     if (expired.length > 0) {
       console.log(`Auto-cancelled ${expired.length} expired reservations`);
@@ -43,20 +43,41 @@ export class CronService {
         createdAt: { lt: before },
         payment: { paymentMethod: "MANUAL_TRANSFER" },
       },
+      include: {
+        reservationRooms: true,
+      },
     });
   }
 
-  private async cancelExpiredReservation(resId: string) {
-    await this.prisma.$transaction([
-      this.prisma.payment.update({
+  private async cancelExpiredReservation(res: any) {
+    const resId = res.id;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.payment.update({
         where: { reservationId: resId },
         data: { paymentStatus: "REJECTED" },
-      }),
-      this.prisma.reservation.update({
+      });
+      await tx.reservation.update({
         where: { id: resId },
         data: { status: "CANCELLED" },
-      }),
-    ]);
+      });
+
+      // Release rooms
+      const nights = Math.ceil(
+        (res.checkoutDate.getTime() - res.checkinDate.getTime()) /
+          (1000 * 3600 * 24),
+      );
+      for (const rr of res.reservationRooms) {
+        for (let i = 0; i < nights; i++) {
+          const date = new Date(res.checkinDate);
+          date.setDate(date.getDate() + i);
+          await tx.roomAvailability.upsert({
+            where: { roomId_date: { roomId: rr.roomId, date } },
+            update: { isAvailable: true },
+            create: { roomId: rr.roomId, date, isAvailable: true },
+          });
+        }
+      }
+    });
   }
 
   // ─── H-1 Check-in Reminder ────────────────────────────────────────

@@ -199,8 +199,6 @@ export class AuthService {
       where: { email: googleUser.email },
     });
 
-    let isNewUser = false;
-
     if (!user) {
       // Create new Google user
       user = await this.prisma.user.create({
@@ -214,7 +212,6 @@ export class AuthService {
           isVerified: true,
         },
       });
-      isNewUser = true;
     }
 
     // 3. Generate tokens

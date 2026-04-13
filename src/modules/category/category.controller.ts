@@ -6,12 +6,22 @@ export class CategoryController {
   constructor(private categoryService: CategoryService) {}
 
   getCategories = async (req: Request, res: Response) => {
-    const tenantId = req.query.tenantId as string | undefined;
-    const result = await this.categoryService.getCategories(
-      req.query as any,
-      tenantId,
-    );
-    res.status(200).send(result);
+    try {
+      console.log("[CategoryController] getCategories hit. Query:", req.query);
+      const tenantId = req.query.tenantId as string | undefined;
+      const result = await this.categoryService.getCategories(
+        req.query as any,
+        tenantId,
+      );
+      console.log("[CategoryController] getCategories success.");
+      res.status(200).send(result);
+    } catch (error) {
+      console.error("[CategoryController] Error in getCategories:", error);
+      res.status(500).json({
+        message: "Internal Server Error in getCategories",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
 
   getCategoryById = async (req: Request, res: Response) => {
