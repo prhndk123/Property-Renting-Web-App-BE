@@ -54,7 +54,7 @@ export class PropertyService {
       take,
       sortBy,
       sortOrder,
-      city,
+      destination,
       categoryId,
       search,
       startDate,
@@ -104,7 +104,9 @@ export class PropertyService {
     // ── Build WHERE clause ──
     // Only show properties that have at least one room (i.e., some availability)
     const where: Prisma.PropertyWhereInput = {
-      city: city ? { contains: city, mode: "insensitive" } : undefined,
+      city: destination
+        ? { contains: destination, mode: "insensitive" }
+        : undefined,
       name: search ? { contains: search, mode: "insensitive" } : undefined,
       ...categoryWhere,
       // Must have at least one room
