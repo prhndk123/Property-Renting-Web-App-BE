@@ -39,7 +39,6 @@ export class ReservationService {
         info,
       );
       await this.createResRoom(tx, res.id, roomId, info);
-      await this.createResPayment(tx, res.id, paymentMethod);
       const invoiceUrl = await this.handleGateway(
         tx,
         paymentMethod,
@@ -47,6 +46,7 @@ export class ReservationService {
         res.id,
         info,
       );
+      await this.createResPayment(tx, res.id, paymentMethod, invoiceUrl);
       return { ...res, invoiceUrl };
     });
   }
@@ -91,9 +91,15 @@ export class ReservationService {
     tx: any,
     reservationId: string,
     paymentMethod: string,
+    invoiceUrl?: string | null,
   ) {
     return tx.payment.create({
-      data: { reservationId, paymentMethod, paymentStatus: "PENDING" },
+      data: {
+        reservationId,
+        paymentMethod,
+        paymentStatus: "PENDING",
+        invoiceUrl: invoiceUrl || null,
+      },
     });
   }
 
@@ -163,6 +169,26 @@ export class ReservationService {
       reservationRooms: { include: { room: true } },
       payment: true,
     };
+  }
+
+  // ─── GET SINGLE RESERVATION ─────────────────────────────────────────
+
+  async getReservationById(resId: string, userId: string, role: string | null) {
+    const res = await this.prisma.reservation.findUnique({
+      where: { id: resId },
+      include: this.reservationInclude(),
+    });
+    if (!res) throw new ApiError("Reservation not found", 404);
+
+    // Scope check: user can only see own reservations, tenant sees their properties
+    if (role === "TENANT") {
+      if (res.property.tenantId !== userId)
+        throw new ApiError("Forbidden", 403);
+    } else {
+      if (res.userId !== userId) throw new ApiError("Not found", 404);
+    }
+
+    return res;
   }
 
   // ─── UPLOAD PAYMENT PROOF ───────────────────────────────────────────
@@ -263,6 +289,16 @@ export class ReservationService {
   async handleXenditWebhook(payload: any) {
     const { external_id, status } = payload;
     if (!external_id || status !== "PAID") return { message: "Ignored" };
+
+    // Xendit sends test webhooks with dummy IDs. Prisma will crash (500) if we pass non-UUIDs.
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(external_id)) {
+      console.log(
+        "Xendit Webhook: Ignored non-UUID external_id (likely a test webhook)",
+      );
+      return { message: "Ignored non-UUID" };
+    }
 
     const res = await this.prisma.reservation.findUnique({
       where: { id: external_id },

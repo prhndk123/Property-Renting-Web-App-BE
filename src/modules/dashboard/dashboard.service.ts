@@ -135,4 +135,104 @@ export class DashboardService {
       Math.round(((booked._sum.nights ?? 0) / totalPotential) * 10000) / 100
     );
   }
+
+  async getSalesReport(tenantId: string, start?: Date, end?: Date) {
+    const range = this.getDateRange(start, end, 30);
+    const where = {
+      property: { tenantId },
+      status: { in: ["CONFIRMED", "COMPLETED"] as any },
+      createdAt: range,
+    };
+
+    const [byProperty, byUser, transactions] = await Promise.all([
+      this.prisma.reservation.groupBy({
+        by: ["propertyId"],
+        where,
+        _sum: { totalPrice: true },
+        _count: { id: true },
+      }),
+      this.prisma.reservation.groupBy({
+        by: ["userId"],
+        where,
+        _sum: { totalPrice: true },
+        _count: { id: true },
+      }),
+      this.prisma.reservation.findMany({
+        where,
+        include: {
+          user: { select: { name: true, email: true } },
+          property: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    // Enhance property info
+    const propertyIds = byProperty.map((p) => p.propertyId);
+    const propertyNames = await this.prisma.property.findMany({
+      where: { id: { in: propertyIds } },
+      select: { id: true, name: true },
+    });
+
+    // Enhance user info
+    const userIds = byUser.map((u) => u.userId);
+    const userNames = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, email: true },
+    });
+
+    return {
+      byProperty: byProperty.map((p) => ({
+        ...p,
+        name:
+          propertyNames.find((pn) => pn.id === p.propertyId)?.name || "Unknown",
+      })),
+      byUser: byUser.map((u) => ({
+        ...u,
+        name: userNames.find((un) => un.id === u.userId)?.name || "Unknown",
+        email: userNames.find((un) => un.id === u.userId)?.email || "",
+      })),
+      transactions,
+    };
+  }
+
+  async getPropertyCalendar(tenantId: string, month: number, year: number) {
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+    const rooms = await this.prisma.room.findMany({
+      where: { property: { tenantId } },
+      select: {
+        id: true,
+        name: true,
+        propertyId: true,
+        property: { select: { name: true } },
+      },
+    });
+
+    const reservations = await this.prisma.reservationRoom.findMany({
+      where: {
+        room: { property: { tenantId } },
+        reservation: {
+          status: { in: ["CONFIRMED", "COMPLETED"] as any },
+          OR: [
+            { checkinDate: { gte: start, lte: end } },
+            { checkoutDate: { gte: start, lte: end } },
+          ],
+        },
+      },
+      include: {
+        reservation: {
+          select: {
+            id: true,
+            checkinDate: true,
+            checkoutDate: true,
+            user: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    return { rooms, reservations };
+  }
 }

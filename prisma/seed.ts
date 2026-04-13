@@ -1,8 +1,6 @@
 import "dotenv/config";
-import { PrismaClient } from "../generated/prisma/client/index.js";
+import { prisma } from "../src/lib/prisma.js";
 import { hashPassword } from "../src/lib/argon.js";
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");

@@ -21,6 +21,16 @@ export class ReservationController {
     res.status(200).send(result);
   };
 
+  getReservationById = async (req: Request, res: Response) => {
+    const user = (req as AuthRequest).user!;
+    const result = await this.svc.getReservationById(
+      req.params.id,
+      user.id,
+      user.role,
+    );
+    res.status(200).send(result);
+  };
+
   uploadPaymentProof = async (req: Request, res: Response) => {
     const userId = (req as AuthRequest).user?.id!;
     const result = await this.svc.uploadPaymentProof(
@@ -60,12 +70,18 @@ export class ReservationController {
   };
 
   xenditWebhook = async (req: Request, res: Response) => {
+    console.log("=== XENDIT WEBHOOK RECEIVED ===");
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("Body:", JSON.stringify(req.body, null, 2));
     try {
-      await this.svc.handleXenditWebhook(req.body);
+      const result = await this.svc.handleXenditWebhook(req.body);
+      console.log("Webhook processed successfully:", result);
       res.status(200).send("OK");
-    } catch (error) {
-      console.error("Webhook error:", error);
-      res.status(500).send("Error");
+    } catch (error: any) {
+      console.error("=== WEBHOOK ERROR ===");
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+      res.status(200).send("OK"); // Always return 200 to Xendit so it doesn't retry with errors
     }
   };
 }

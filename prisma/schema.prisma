@@ -259,6 +259,7 @@ model Payment {
   reservationId String        @unique @db.Uuid
   paymentMethod PaymentMethod
   paymentProof  String?
+  invoiceUrl    String?
   paymentStatus PaymentStatus @default(PENDING)
   paidAt        DateTime?
   createdAt     DateTime      @default(now())

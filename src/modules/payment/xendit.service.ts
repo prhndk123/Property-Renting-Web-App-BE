@@ -30,6 +30,8 @@ export class XenditService {
           payerEmail: params.payerEmail,
           description: params.description,
           currency: "IDR",
+          successRedirectUrl: `${process.env.BASE_FRONTEND_URL || "http://localhost:5173"}/user/order-detail/${params.externalId}`,
+          failureRedirectUrl: `${process.env.BASE_FRONTEND_URL || "http://localhost:5173"}/user/order-detail/${params.externalId}`,
         },
       });
       return response;

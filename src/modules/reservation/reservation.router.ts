@@ -35,6 +35,7 @@ export class ReservationRouter {
       this.validationMiddleware.validateBody(CreateReservationDto),
       this.ctrl.createReservation,
     );
+    this.router.get("/:id", this.ctrl.getReservationById);
     this.router.patch("/:id/payment-proof", this.ctrl.uploadPaymentProof);
     this.router.patch("/:id/confirm", this.ctrl.confirmPayment);
     this.router.post("/:id/cancel", this.ctrl.cancelReservation);
