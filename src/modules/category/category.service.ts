@@ -13,7 +13,18 @@ export class CategoryService {
   constructor(private prisma: PrismaClient) {}
 
   async getCategories(query: GetCategoriesQueryDto, tenantId?: string) {
-    const { page, take, search } = query;
+    console.log("[CategoryService] Starting getCategories with params:", {
+      query,
+      tenantId,
+    });
+
+    // Ensure numeric types for pagination
+    const page = Number(query.page) || 1;
+    const take = Number(query.take) || 50;
+    const search = query.search;
+
+    console.log("[CategoryService] Sanitized params:", { page, take, search });
+
     const where: Prisma.PropertyCategoryWhereInput = {
       ...(tenantId ? { tenantId } : {}),
       ...(search
@@ -21,28 +32,35 @@ export class CategoryService {
         : {}),
     };
 
-    const [data, total] = await Promise.all([
-      this.prisma.propertyCategory.findMany({
-        where,
-        take,
-        skip: (page - 1) * take,
-        orderBy: { name: "asc" },
-        include: {
-          _count: { select: { properties: true } },
-        },
-      }),
-      this.prisma.propertyCategory.count({ where }),
-    ]);
+    try {
+      console.log("[CategoryService] Executing DB query...");
+      const [data, total] = await Promise.all([
+        this.prisma.propertyCategory.findMany({
+          where,
+          take,
+          skip: (page - 1) * take,
+          orderBy: { name: "asc" },
+          include: {
+            _count: { select: { properties: true } },
+          },
+        }),
+        this.prisma.propertyCategory.count({ where }),
+      ]);
+      console.log("[CategoryService] DB query successful. Count:", total);
 
-    return {
-      data,
-      meta: {
-        page,
-        take,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / take)),
-      },
-    };
+      return {
+        data,
+        meta: {
+          page,
+          take,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / take)),
+        },
+      };
+    } catch (error) {
+      console.error("[CategoryService] DB Query failed:", error);
+      throw error;
+    }
   }
 
   async getCategoryById(id: string) {
