@@ -17,7 +17,7 @@ interface SendEmailParams {
 export const sendEmail = async ({ to, subject, html }: SendEmailParams) => {
   try {
     const info = await transporter.sendMail({
-      from: `"Mini Project Event" <${process.env.MAIL_USER}>`,
+      from: `"Final Project" <${process.env.MAIL_USER}>`,
       to,
       subject,
       html,

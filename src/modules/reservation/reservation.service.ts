@@ -329,40 +329,72 @@ export class ReservationService {
     });
   }
 
+  verifyWebhookToken(token: string) {
+    return this.xenditService.verifyWebhookToken(token);
+  }
+
   // ─── XENDIT WEBHOOK ────────────────────────────────────────────────
 
   async handleXenditWebhook(payload: any) {
+    console.log("=== WEBHOOK HANDLER START ===");
+    console.log("Full payload:", JSON.stringify(payload, null, 2));
+
     const { external_id, status } = payload;
-    if (!external_id || status !== "PAID") return { message: "Ignored" };
+    console.log(`Extracted: external_id="${external_id}", status="${status}"`);
+
+    if (!external_id || status !== "PAID") {
+      console.log(
+        `IGNORED: external_id is falsy (${!external_id}) or status !== "PAID" (status="${status}")`,
+      );
+      return { message: "Ignored" };
+    }
 
     // Xendit sends test webhooks with dummy IDs. Prisma will crash (500) if we pass non-UUIDs.
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(external_id)) {
       console.log(
-        "Xendit Webhook: Ignored non-UUID external_id (likely a test webhook)",
+        `Xendit Webhook: Ignored non-UUID external_id: "${external_id}"`,
       );
       return { message: "Ignored non-UUID" };
     }
 
+    console.log(`UUID valid. Looking up reservation with id: ${external_id}`);
     const res = await this.prisma.reservation.findUnique({
       where: { id: external_id },
       include: this.reservationInclude(),
     });
-    if (!res) return { message: "Reservation not found" };
-    if (res.status === "CONFIRMED") return { message: "Already confirmed" };
 
+    if (!res) {
+      console.log(`IGNORED: Reservation NOT FOUND for id: ${external_id}`);
+      return { message: "Reservation not found" };
+    }
+    console.log(
+      `Found reservation: id=${res.id}, status=${res.status}, rooms=${res.reservationRooms?.length}`,
+    );
+
+    if (res.status === "CONFIRMED") {
+      console.log("IGNORED: Reservation already CONFIRMED");
+      return { message: "Already confirmed" };
+    }
+
+    console.log("Starting transaction to confirm payment...");
     return this.prisma.$transaction(async (tx: any) => {
+      console.log("TX: Updating payment to CONFIRMED...");
       await tx.payment.update({
         where: { reservationId: external_id },
         data: { paymentStatus: "CONFIRMED", paidAt: new Date() },
       });
+      console.log("TX: Updating reservation status to CONFIRMED...");
       const updated = await tx.reservation.update({
         where: { id: external_id },
         data: { status: "CONFIRMED" },
       });
+      console.log("TX: Toggling dates availability...");
       await this.toggleDatesAvailability(tx, res, false);
+      console.log("TX: Sending confirmation email...");
       await this.sendConfirmationEmail(res);
+      console.log("=== WEBHOOK HANDLER COMPLETE - RESERVATION CONFIRMED ===");
       return updated;
     });
   }
