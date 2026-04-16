@@ -41,7 +41,6 @@ export class CronService {
       where: {
         status: "WAITING_PAYMENT",
         createdAt: { lt: before },
-        payment: { paymentMethod: "MANUAL_TRANSFER" },
       },
       include: {
         reservationRooms: true,

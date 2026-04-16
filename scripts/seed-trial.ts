@@ -22,9 +22,17 @@ async function seed() {
 
     // 2. Create a Category
     const category = await prisma.propertyCategory.upsert({
-      where: { name: "Villa" },
+      where: {
+        name_tenantId: {
+          name: "Villa",
+          tenantId: tenant.id,
+        },
+      },
       update: {},
-      create: { name: "Villa" },
+      create: {
+        name: "Villa",
+        tenantId: tenant.id,
+      },
     });
     console.log("✅ Category: Villa");
 
