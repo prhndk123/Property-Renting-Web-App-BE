@@ -5,7 +5,7 @@ export class XenditService {
 
   constructor() {
     this.xendit = new Xendit({
-      secretKey: process.env.XENDIT_SECRET_KEY || "dummy_key",
+      secretKey: process.env.XENDIT_SECRET_KEY as string,
     });
   }
 
@@ -15,13 +15,6 @@ export class XenditService {
     payerEmail: string;
     description: string;
   }) {
-    if (!process.env.XENDIT_SECRET_KEY) {
-      console.warn(
-        "XENDIT_SECRET_KEY is not set. Generating mock invoice URL.",
-      );
-      return { invoiceUrl: "https://checkout.xendit.co/v2/mock-invoice-url" };
-    }
-
     try {
       const response = await this.xendit.Invoice.createInvoice({
         data: {
@@ -35,6 +28,14 @@ export class XenditService {
           failureRedirectUrl: `${process.env.BASE_FRONTEND_URL || "http://localhost:5173"}/user/order-detail/${params.externalId}`,
         },
       });
+      console.log(
+        "Xendit Invoice Created Successfully for ID:",
+        params.externalId,
+      );
+      console.log(
+        "Invoice URL:",
+        (response as any).invoiceUrl || (response as any).invoice_url,
+      );
       return response;
     } catch (error: any) {
       console.error("Failed to create Xendit invoice", error);
@@ -43,7 +44,7 @@ export class XenditService {
   }
 
   verifyWebhookToken(token: string) {
-    if (!process.env.XENDIT_WEBHOOK_TOKEN) return true; // mock mode
+    if (!process.env.XENDIT_WEBHOOK_TOKEN) return false;
     return token === process.env.XENDIT_WEBHOOK_TOKEN;
   }
 }
