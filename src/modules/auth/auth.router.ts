@@ -54,11 +54,6 @@ export class AuthRouter {
     this.router.post(
       "/reset-password",
       this.validationMiddleware.validateBody(ResetPasswordDto),
-      this.authController.forgotPassword,
-    );
-    this.router.post(
-      "/reset-password",
-      this.validationMiddleware.validateBody(ResetPasswordDto),
       this.authController.resetPassword,
     );
     this.router.post(
