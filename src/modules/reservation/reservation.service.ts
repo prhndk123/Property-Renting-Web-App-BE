@@ -123,7 +123,7 @@ export class ReservationService {
     const invoice = await this.xenditService.createInvoice({
       externalId: resId,
       amount: Number(info.totalPrice),
-      payerEmail: user?.email || "guest@example.com",
+      payerEmail: user?.email || "guest@example.com", // Fallback email is required by Xendit
       description: `Payment for Reservation ${resId}`,
     });
     return (invoice as any).invoiceUrl || (invoice as any).invoice_url;
@@ -336,11 +336,11 @@ export class ReservationService {
   // ─── XENDIT WEBHOOK ────────────────────────────────────────────────
 
   async handleXenditWebhook(payload: any) {
-    console.log("=== WEBHOOK HANDLER START ===");
-    console.log("Full payload:", JSON.stringify(payload, null, 2));
+    console.log("=== XENDIT WEBHOOK HANDLER START ===");
+    console.log("Full payload data:", JSON.stringify(payload, null, 2));
 
     const { external_id, status } = payload;
-    console.log(`Extracted: external_id="${external_id}", status="${status}"`);
+    console.log(`Webhook Received: ID=${external_id}, STATUS=${status}`);
 
     if (!external_id || status !== "PAID") {
       console.log(
