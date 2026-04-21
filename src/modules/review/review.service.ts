@@ -33,7 +33,12 @@ export class ReviewService {
       throw new ApiError("Reservation not found", 404);
     if (res.status !== "CONFIRMED" && res.status !== "COMPLETED")
       throw new ApiError("Cannot review yet", 400);
-    if (new Date() < res.checkoutDate)
+    const now = new Date();
+    const checkoutDate = new Date(res.checkoutDate);
+    now.setHours(0, 0, 0, 0);
+    checkoutDate.setHours(0, 0, 0, 0);
+
+    if (now < checkoutDate)
       throw new ApiError("Can only review after checkout date", 400);
 
     const existing = await this.prisma.review.findUnique({

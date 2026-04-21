@@ -1,1 +1,192 @@
-<html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Payment Confirmed ✅</title><style>body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #f5f5f5; margin: 0; padding: 20px; } .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); } .header { background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: white; padding: 40px 24px; text-align: center; } .header-icon { font-size: 48px; margin-bottom: 16px; } .header h1 { margin: 0; font-size: 28px; font-weight: 700; } .header p { margin: 8px 0 0; font-size: 16px; opacity: 0.9; } .content { padding: 32px 24px; } .greeting { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a; } .message { color: #4a4a4a; margin-bottom: 24px; } .button-container { text-align: center; margin: 32px 0; } .cta-button { display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: white !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); } .details-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px; } .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; } .detail-label { color: #6b7280; font-weight: 500; } .detail-value { color: #1a1a1a; font-weight: 600; text-align: right; } .feature-item { display: flex; align-items: flex-start; margin-bottom: 12px; } .feature-icon { width: 24px; margin-right: 12px; font-size: 16px; } .feature-text { color: #4a4a4a; font-size: 14px; } .footer { background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0; } .footer p { margin: 0 0 8px 0; font-size: 13px; color: #6b7280; } .brand { font-weight: 600; color: #4f46e5; } .subtext { color: #6b7280; font-size: 13px; margin-top: 20px; } .receipt-total { margin-top: 16px; padding-top: 16px; border-top: 2px dashed #cbd5e1; font-size: 18px; font-weight: 700; color: #1a1a1a; }</style></head><body><div class="container"><div class="header"><div class="header-icon">🧾</div><h1>Booking Confirmed!</h1><p>Your payment was successful</p></div><div class="content"><p class="greeting">Hi {{name}},</p><p class="message">Great news! Your payment has been confirmed and your booking is officially secured. We have prepared the details of your upcoming stay.</p><div class="details-box"><div class="detail-row"><span class="detail-label">Booking ID</span><span class="detail-value">#{{reservationId}}</span></div><div class="detail-row"><span class="detail-label">Property</span><span class="detail-value">{{propertyName}}</span></div><div class="detail-row"><span class="detail-label">Check-in</span><span class="detail-value">{{checkinDate}}</span></div><div class="detail-row"><span class="detail-label">Check-out</span><span class="detail-value">{{checkoutDate}}</span></div><div class="detail-row receipt-total"><span class="detail-label">Amount Paid</span><span class="detail-value">Rp {{totalPrice}}</span></div></div><p class="message">You can view your booking details or contact the host anytime via your Rentivo dashboard. Have a wonderful stay!</p></div><div class="footer"><p>Thank you for choosing Rentivo.</p><p>&copy; 2026 <span class="brand">Rentivo App</span>. All rights reserved.</p></div></div></body></html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pembayaran Terkonfirmasi ✅</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #f5f5f5; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+    .header { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 40px 24px; text-align: center; }
+    .header-icon { font-size: 48px; margin-bottom: 16px; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+    .header p { margin: 8px 0 0; font-size: 16px; opacity: 0.9; }
+    .content { padding: 32px 24px; }
+    .greeting { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a; }
+    .message { color: #4a4a4a; margin-bottom: 24px; font-size: 14px; }
+    .section-title { font-size: 16px; font-weight: 700; color: #1a1a1a; margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; }
+    .section-icon { margin-right: 8px; }
+    .details-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+    .detail-row:last-child { margin-bottom: 0; }
+    .detail-label { color: #6b7280; font-weight: 500; }
+    .detail-value { color: #1a1a1a; font-weight: 600; text-align: right; max-width: 60%; }
+    .room-table { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 14px; }
+    .room-table th { background-color: #f1f5f9; color: #475569; font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; }
+    .room-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+    .room-table tr:last-child td { border-bottom: none; }
+    .total-row { padding: 14px 16px; background: linear-gradient(135deg, #059669 0%, #10b981 100%); border-radius: 0 0 8px 8px; display: flex; justify-content: space-between; align-items: center; }
+    .total-label { color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 500; }
+    .total-value { color: #ffffff; font-size: 20px; font-weight: 700; }
+    .status-badge { display: inline-block; background-color: #dcfce7; color: #166534; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 20px; margin-bottom: 20px; }
+    .booking-id { display: inline-block; background-color: #f0fdf4; color: #059669; font-family: monospace; font-size: 14px; font-weight: 700; padding: 4px 10px; border-radius: 4px; letter-spacing: 1px; }
+    .rules-box { background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    .rule-item { display: flex; align-items: flex-start; margin-bottom: 10px; font-size: 13px; color: #4a4a4a; }
+    .rule-item:last-child { margin-bottom: 0; }
+    .rule-icon { margin-right: 10px; font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+    .rule-text { flex: 1; }
+    .tips-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
+    .tip-item { display: flex; align-items: flex-start; margin-bottom: 10px; font-size: 13px; color: #4a4a4a; }
+    .tip-item:last-child { margin-bottom: 0; }
+    .tip-icon { margin-right: 10px; font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+    .tip-text { flex: 1; }
+    .subtext { color: #6b7280; font-size: 13px; margin-top: 20px; }
+    .footer { background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0; }
+    .footer p { margin: 0 0 8px 0; font-size: 13px; color: #6b7280; }
+    .brand { font-weight: 600; color: #059669; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">✅</div>
+      <h1>Pembayaran Terkonfirmasi!</h1>
+      <p>Pemesanan Anda telah berhasil dikonfirmasi</p>
+    </div>
+
+    <div class="content">
+      <p class="greeting">Halo {{name}},</p>
+      
+      <div class="status-badge">✓ PEMBAYARAN BERHASIL</div>
+
+      <p class="message">
+        Selamat! Pembayaran Anda telah kami terima dan pemesanan Anda di <strong>{{propertyName}}</strong> telah dikonfirmasi. 
+        Berikut adalah detail pemesanan beserta informasi penting yang perlu Anda ketahui sebelum menginap.
+      </p>
+
+      <!-- Booking ID -->
+      <p style="margin-bottom: 20px; font-size: 14px;">Booking ID: <span class="booking-id">#{{reservationId}}</span></p>
+
+      <!-- ═══ DETAIL PEMESANAN ═══ -->
+      <div class="section-title"><span class="section-icon">📋</span> Detail Pemesanan</div>
+      <div class="details-box">
+        <div class="detail-row">
+          <span class="detail-label">Properti</span>
+          <span class="detail-value">{{propertyName}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Alamat</span>
+          <span class="detail-value">{{propertyAddress}}{{#if propertyCity}}, {{propertyCity}}{{/if}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Check-in</span>
+          <span class="detail-value">{{checkinDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Check-out</span>
+          <span class="detail-value">{{checkoutDate}}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Durasi</span>
+          <span class="detail-value">{{nights}} malam</span>
+        </div>
+      </div>
+
+      <!-- ═══ DETAIL KAMAR ═══ -->
+      <div class="section-title"><span class="section-icon">🛏️</span> Detail Kamar</div>
+      <div class="details-box" style="padding: 0; overflow: hidden;">
+        <table class="room-table">
+          <thead>
+            <tr>
+              <th>Kamar</th>
+              <th>Malam</th>
+              <th style="text-align: right;">Harga</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each rooms}}
+            <tr>
+              <td>{{this.name}}</td>
+              <td>{{this.nights}} malam</td>
+              <td style="text-align: right; font-weight: 600;">Rp {{this.price}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+        <div class="total-row">
+          <span class="total-label">Total Pembayaran</span>
+          <span class="total-value">Rp {{totalPrice}}</span>
+        </div>
+      </div>
+
+      <!-- ═══ TATA CARA PENGGUNAAN PROPERTI ═══ -->
+      <div class="section-title"><span class="section-icon">📖</span> Tata Cara Penggunaan Properti</div>
+      <div class="tips-box">
+        <div class="tip-item">
+          <span class="tip-icon">🕐</span>
+          <span class="tip-text"><strong>Check-in:</strong> Waktu check-in mulai pukul <strong>14:00</strong>. Silakan menghubungi pengelola properti jika ingin melakukan early check-in.</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">🕛</span>
+          <span class="tip-text"><strong>Check-out:</strong> Waktu check-out maksimal pukul <strong>12:00</strong> pada tanggal check-out. Keterlambatan dapat dikenakan biaya tambahan.</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">🪪</span>
+          <span class="tip-text"><strong>Identitas:</strong> Siapkan kartu identitas (KTP/Passport) saat check-in untuk proses verifikasi.</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">🔑</span>
+          <span class="tip-text"><strong>Kunci & Akses:</strong> Kunci kamar akan diberikan saat check-in. Pastikan kunci dikembalikan saat check-out.</span>
+        </div>
+        <div class="tip-item">
+          <span class="tip-icon">📶</span>
+          <span class="tip-text"><strong>Fasilitas:</strong> Informasi WiFi dan fasilitas lainnya akan diberikan oleh pengelola saat Anda tiba.</span>
+        </div>
+      </div>
+
+      <!-- ═══ ATURAN PENGGUNAAN PROPERTI ═══ -->
+      <div class="section-title"><span class="section-icon">⚠️</span> Aturan Penggunaan Properti</div>
+      <div class="rules-box">
+        <div class="rule-item">
+          <span class="rule-icon">🚭</span>
+          <span class="rule-text">Dilarang merokok di dalam ruangan. Area merokok tersedia di luar bangunan.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-icon">🐾</span>
+          <span class="rule-text">Hewan peliharaan tidak diperbolehkan kecuali ada persetujuan tertulis dari pengelola.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-icon">🔇</span>
+          <span class="rule-text">Harap menjaga ketenangan, terutama pada pukul 22:00 - 07:00 demi kenyamanan tamu lainnya.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-icon">🏠</span>
+          <span class="rule-text">Jaga kebersihan dan kerapihan properti selama menginap. Kerusakan fasilitas akan menjadi tanggung jawab tamu.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-icon">🎉</span>
+          <span class="rule-text">Mengadakan pesta atau acara di dalam properti tidak diperbolehkan tanpa izin sebelumnya.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-icon">👥</span>
+          <span class="rule-text">Tamu tambahan di luar jumlah yang terdaftar pada pemesanan harap melapor ke pengelola.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-icon">🗑️</span>
+          <span class="rule-text">Buang sampah pada tempat yang telah disediakan. Pemisahan sampah organik dan anorganik sangat dianjurkan.</span>
+        </div>
+      </div>
+
+      <p class="subtext">
+        Jika Anda memiliki pertanyaan atau membutuhkan bantuan, silakan hubungi pengelola properti melalui dashboard Rentivo Anda. Selamat berlibur! 🌟
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>Terima kasih telah memilih Rentivo.</p>
+      <p>&copy; 2026 <span class="brand">Rentivo App</span>. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

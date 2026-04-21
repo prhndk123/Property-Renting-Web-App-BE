@@ -119,13 +119,38 @@ export class CronService {
       },
       include: {
         user: { select: { name: true, email: true } },
-        property: { select: { name: true, address: true } },
+        property: { select: { name: true, address: true, city: true } },
+        reservationRooms: {
+          include: {
+            room: { select: { name: true } },
+          },
+        },
       },
     });
   }
 
   private async sendReminderEmail(res: any) {
     if (!res.user?.email) return;
+
+    const nights = Math.ceil(
+      (res.checkoutDate.getTime() - res.checkinDate.getTime()) /
+        (1000 * 3600 * 24),
+    );
+
+    const rooms = res.reservationRooms.map((rr: any) => ({
+      name: rr.room.name,
+      nights: rr.nights,
+      price: Number(rr.price).toLocaleString("id-ID"),
+    }));
+
+    const formatDate = (d: Date) =>
+      d.toLocaleDateString("id-ID", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
     this.mailService
       .sendEmail(
         res.user.email,
@@ -135,7 +160,13 @@ export class CronService {
           name: res.user.name,
           propertyName: res.property.name,
           propertyAddress: res.property.address,
-          checkinDate: res.checkinDate.toLocaleDateString(),
+          propertyCity: res.property.city || "",
+          checkinDate: formatDate(res.checkinDate),
+          checkoutDate: formatDate(res.checkoutDate),
+          nights,
+          rooms,
+          totalPrice: Number(res.totalPrice).toLocaleString("id-ID"),
+          reservationId: res.id.slice(0, 8).toUpperCase(),
         },
       )
       .catch((e) => console.error("Reminder email failed:", e));
