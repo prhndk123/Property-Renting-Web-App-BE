@@ -203,6 +203,11 @@ export class ReservationService {
       },
       reservationRooms: { include: { room: true } },
       payment: true,
+      review: {
+        include: {
+          reply: true,
+        },
+      },
     };
   }
 
@@ -456,15 +461,41 @@ export class ReservationService {
   private async sendConfirmationEmail(res: any) {
     const user = res.user;
     if (!user) return;
+
+    const nights = this.calcNights(res.checkinDate, res.checkoutDate);
+
+    const rooms = (res.reservationRooms || []).map((rr: any) => ({
+      name: rr.room?.name || "Room",
+      nights: rr.nights,
+      price: Number(rr.price).toLocaleString("id-ID"),
+    }));
+
+    const formatDate = (d: Date) =>
+      d.toLocaleDateString("id-ID", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
     this.mailService
-      .sendEmail(user.email, "Payment Confirmed ✅", "payment-receipt", {
-        name: user.name,
-        reservationId: res.id,
-        propertyName: res.property?.name || "Property",
-        checkinDate: res.checkinDate.toLocaleDateString(),
-        checkoutDate: res.checkoutDate.toLocaleDateString(),
-        totalPrice: Number(res.totalPrice).toLocaleString("id-ID"),
-      })
+      .sendEmail(
+        user.email,
+        "Pembayaran Terkonfirmasi - Detail Pemesanan Anda ✅",
+        "payment-receipt",
+        {
+          name: user.name,
+          reservationId: res.id.slice(0, 8).toUpperCase(),
+          propertyName: res.property?.name || "Property",
+          propertyAddress: res.property?.address || "",
+          propertyCity: res.property?.city || "",
+          checkinDate: formatDate(res.checkinDate),
+          checkoutDate: formatDate(res.checkoutDate),
+          nights,
+          rooms,
+          totalPrice: Number(res.totalPrice).toLocaleString("id-ID"),
+        },
+      )
       .catch((e) => console.error("Confirmation email failed", e));
   }
 }

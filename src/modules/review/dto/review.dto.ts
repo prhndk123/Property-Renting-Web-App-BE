@@ -8,7 +8,7 @@ import {
   Max,
   Min,
 } from "class-validator";
-import { Transform } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 
 export class CreateReviewDto {
   @IsNotEmpty()
@@ -16,6 +16,7 @@ export class CreateReviewDto {
   reservationId!: string;
 
   @IsNotEmpty()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(5)
