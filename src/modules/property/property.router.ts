@@ -43,6 +43,12 @@ export class PropertyRouter {
     this.router.get("/:slug", this.propertyController.getPropertyBySlug);
     this.router.get("/id/:id", this.propertyController.getPropertyById); // Use /id/:id to avoid conflict with /:slug
 
+    this.router.post(
+      "/:id/save",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.propertyController.toggleSaveProperty,
+    );
+
     // All subsequent routes are protected
     this.router.use(this.authMiddleware.verifyToken(process.env.JWT_SECRET!));
     this.router.use(this.authMiddleware.verifyRole([UserRole.TENANT]));

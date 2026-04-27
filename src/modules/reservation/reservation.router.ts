@@ -27,6 +27,11 @@ export class ReservationRouter {
       this.validationMiddleware.validateQuery(GetReservationsQueryDto),
       this.ctrl.getReservations,
     );
+    this.router.get(
+      "/my",
+      this.validationMiddleware.validateQuery(GetReservationsQueryDto),
+      this.ctrl.getReservations,
+    );
     this.router.post(
       "/",
       this.validationMiddleware.validateBody(CreateReservationDto),

@@ -11,6 +11,7 @@ import {
   GetUsersQueryDto,
   UpdateProfileDto,
   UpdatePasswordDto,
+  CreatePaymentMethodDto,
 } from "./dto/user.dto.js";
 
 export class UserService {
@@ -28,9 +29,10 @@ export class UserService {
       sortOrder = "desc",
       search,
     } = query;
-    const where: Prisma.UserWhereInput = search
-      ? { name: { contains: search, mode: "insensitive" } }
-      : {};
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      ...(search && { name: { contains: search, mode: "insensitive" } }),
+    };
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
@@ -46,7 +48,7 @@ export class UserService {
 
   async getUser(id: string) {
     const user = await this.prisma.user.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       omit: { password: true },
     });
     if (!user) throw new ApiError("User not found", 404);
@@ -116,7 +118,97 @@ export class UserService {
 
   async deleteUser(id: string) {
     await this.getUser(id);
-    await this.prisma.user.delete({ where: { id } });
-    return { message: "Delete user success" };
+    await this.prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { message: "Delete user success (soft delete)" };
+  }
+
+  async getSavedProperties(userId: string) {
+    const saved = await this.prisma.savedProperty.findMany({
+      where: { userId, deletedAt: null },
+      include: {
+        property: {
+          include: {
+            category: true,
+            images: true,
+            reviews: {
+              select: { rating: true },
+            },
+            rooms: {
+              select: { basePrice: true },
+              orderBy: { basePrice: "asc" },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return saved.map((s) => {
+      const p = s.property;
+      const reviewCount = p.reviews.length;
+      const averageRating =
+        reviewCount > 0
+          ? p.reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviewCount
+          : 0;
+
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        city: p.city,
+        category: p.category,
+        images: p.images,
+        lowestPrice: p.rooms.length > 0 ? Number(p.rooms[0].basePrice) : 0,
+        isAvailable: true,
+        averageRating,
+        reviewCount,
+      };
+    });
+  }
+
+  async getSavedPropertyIds(userId: string) {
+    const saved = await this.prisma.savedProperty.findMany({
+      where: { userId, deletedAt: null },
+      select: { propertyId: true },
+    });
+    return saved.map((s) => s.propertyId);
+  }
+
+  async addPaymentMethod(userId: string, body: CreatePaymentMethodDto) {
+    const lastFour = body.cardNumber.slice(-4);
+    return this.prisma.savedPaymentMethod.create({
+      data: {
+        userId,
+        cardName: body.cardName,
+        lastFour,
+        expiry: body.expiry,
+        brand: body.brand || "Visa",
+      },
+    });
+  }
+
+  async getPaymentMethods(userId: string) {
+    return this.prisma.savedPaymentMethod.findMany({
+      where: { userId, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async deletePaymentMethod(userId: string, methodId: string) {
+    const method = await this.prisma.savedPaymentMethod.findUnique({
+      where: { id: methodId, deletedAt: null },
+    });
+    if (!method || method.userId !== userId)
+      throw new ApiError("Payment method not found", 404);
+
+    await this.prisma.savedPaymentMethod.update({
+      where: { id: methodId },
+      data: { deletedAt: new Date() },
+    });
+    return { message: "Payment method deleted (soft delete)" };
   }
 }

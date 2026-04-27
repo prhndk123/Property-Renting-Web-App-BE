@@ -15,14 +15,18 @@ export class AvailabilityService {
     tenantId: string,
     item: SetAvailabilityDto,
   ) {
-    await this.verifyRoomOwner(roomId, tenantId);
-    return this.prisma.roomAvailability.upsert({
-      where: { roomId_date: { roomId, date: new Date(item.date) } },
-      update: { isAvailable: item.isAvailable },
+    const room = await this.verifyRoomOwner(roomId, tenantId);
+    const dateStr = new Date(item.date).toISOString().split("T")[0];
+    const date = new Date(`${dateStr}T00:00:00Z`);
+
+    return this.prisma.roomInventory.upsert({
+      where: { roomId_date: { roomId, date } },
+      update: { totalStock: item.isAvailable ? room.qty : 0 },
       create: {
         roomId,
-        date: new Date(item.date),
-        isAvailable: item.isAvailable,
+        date,
+        totalStock: item.isAvailable ? room.qty : 0,
+        bookedStock: 0,
       },
     });
   }
@@ -32,20 +36,24 @@ export class AvailabilityService {
     tenantId: string,
     data: BulkSetAvailabilityDto,
   ) {
-    await this.verifyRoomOwner(roomId, tenantId);
+    const room = await this.verifyRoomOwner(roomId, tenantId);
 
     const results = await this.prisma.$transaction(
-      data.items.map((item) =>
-        this.prisma.roomAvailability.upsert({
-          where: { roomId_date: { roomId, date: new Date(item.date) } },
-          update: { isAvailable: item.isAvailable },
+      data.items.map((item) => {
+        const dateStr = new Date(item.date).toISOString().split("T")[0];
+        const date = new Date(`${dateStr}T00:00:00Z`);
+
+        return this.prisma.roomInventory.upsert({
+          where: { roomId_date: { roomId, date } },
+          update: { totalStock: item.isAvailable ? room.qty : 0 },
           create: {
             roomId,
-            date: new Date(item.date),
-            isAvailable: item.isAvailable,
+            date,
+            totalStock: item.isAvailable ? room.qty : 0,
+            bookedStock: 0,
           },
-        }),
-      ),
+        });
+      }),
     );
 
     return {
@@ -55,11 +63,11 @@ export class AvailabilityService {
   }
 
   private async verifyRoomOwner(roomId: string, tenantId: string) {
-    const room = await this.prisma.room.findUnique({
-      where: { id: roomId },
+    const room = await this.prisma.room.findFirst({
+      where: { id: roomId, deletedAt: null },
       include: { property: true },
     });
-    if (!room || room.property.tenantId !== tenantId)
+    if (!room || !room.property || room.property.tenantId !== tenantId)
       throw new ApiError("Forbidden", 403);
     return room;
   }
@@ -82,12 +90,18 @@ export class AvailabilityService {
   }
 
   async updatePeakRate(id: string, tenantId: string, data: UpdatePeakRateDto) {
-    const rate = await this.prisma.peakSeasonRate.findUnique({
-      where: { id },
-      include: { room: { include: { property: true } } },
+    const rate = await this.prisma.peakSeasonRate.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        room: {
+          include: { property: true },
+        },
+      },
     });
-    if (!rate) throw new ApiError("Peak rate not found", 404);
-    if (rate.room.property.tenantId !== tenantId)
+    const castedRate = rate as any;
+    if (!rate || !castedRate.room || !castedRate.room.property)
+      throw new ApiError("Peak rate not found", 404);
+    if (castedRate.room.property.tenantId !== tenantId)
       throw new ApiError("Unauthorized", 403);
 
     const updateData: any = {};
@@ -103,16 +117,25 @@ export class AvailabilityService {
   }
 
   async deletePeakRate(id: string, tenantId: string) {
-    const rate = await this.prisma.peakSeasonRate.findUnique({
-      where: { id },
-      include: { room: { include: { property: true } } },
+    const rate = await this.prisma.peakSeasonRate.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        room: {
+          include: { property: true },
+        },
+      },
     });
-    if (!rate) throw new ApiError("Peak rate not found", 404);
-    if (rate.room.property.tenantId !== tenantId)
+    const castedRate = rate as any;
+    if (!rate || !castedRate.room || !castedRate.room.property)
+      throw new ApiError("Peak rate not found", 404);
+    if (castedRate.room.property.tenantId !== tenantId)
       throw new ApiError("Unauthorized", 403);
 
-    await this.prisma.peakSeasonRate.delete({ where: { id } });
-    return { message: "Peak rate deleted successfully" };
+    await this.prisma.peakSeasonRate.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { message: "Peak rate deleted successfully (soft delete)" };
   }
 
   async calculateTotalPrice(roomId: string, startDate: Date, endDate: Date) {
@@ -134,14 +157,22 @@ export class AvailabilityService {
       endDate,
       nights,
       totalPrice,
-      basePrice: room.basePrice,
+      basePrice: room.basePrice as any,
     };
   }
 
   private getDailyPrice(room: any, date: Date) {
-    const rate = room.peakSeasonRates.find(
-      (r: any) => date >= r.startDate && date <= r.endDate,
-    );
+    const dStr = date.toISOString().split("T")[0];
+    const dTime = new Date(`${dStr}T00:00:00Z`).getTime();
+
+    const rate = room.peakSeasonRates.find((r: any) => {
+      const rStartStr = new Date(r.startDate).toISOString().split("T")[0];
+      const rEndStr = new Date(r.endDate).toISOString().split("T")[0];
+      const rStart = new Date(`${rStartStr}T00:00:00Z`).getTime();
+      const rEnd = new Date(`${rEndStr}T00:00:00Z`).getTime();
+      return dTime >= rStart && dTime <= rEnd;
+    });
+
     const base = Number(room.basePrice);
     if (!rate) return base;
     return rate.priceType === "NOMINAL"
@@ -150,31 +181,60 @@ export class AvailabilityService {
   }
 
   private async verifyRoomAvailable(roomId: string, start: Date, end: Date) {
-    const room = await this.prisma.room.findUnique({
-      where: { id: roomId },
-      include: { peakSeasonRates: true },
+    const room = await this.prisma.room.findFirst({
+      where: { id: roomId, deletedAt: null },
+      include: {
+        peakSeasonRates: { where: { deletedAt: null } },
+        inventories: true,
+        property: true,
+      },
     });
-    if (!room) throw new ApiError("Room not found", 404);
+    if (!room || !room.property) throw new ApiError("Room not found", 404);
 
-    const unavailable = await this.prisma.roomAvailability.findFirst({
-      where: { roomId, date: { gte: start, lt: end }, isAvailable: false },
-    });
-    if (unavailable) throw new ApiError("Room not available", 400);
+    const castedRoom = room as any;
+
+    for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+      const dStr = d.toISOString().split("T")[0];
+      const inv = castedRoom.inventories.find(
+        (i: any) => i.date.toISOString().split("T")[0] === dStr,
+      );
+      const totalStock = inv?.totalStock === 0 ? 0 : castedRoom.qty;
+      const bookedStock = inv?.bookedStock ?? 0;
+      if (totalStock - bookedStock < 1) {
+        throw new ApiError("Room not available", 400);
+      }
+    }
+
     return room;
   }
 
   async getPeakRates(roomId: string) {
     return this.prisma.peakSeasonRate.findMany({
-      where: { roomId },
+      where: { roomId, deletedAt: null },
       orderBy: { startDate: "asc" },
     });
   }
 
   async getAvailability(roomId: string, month: number, year: number) {
+    const room = await this.prisma.room.findFirst({
+      where: { id: roomId, deletedAt: null },
+    });
+    if (!room) return [];
+
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0);
-    return this.prisma.roomAvailability.findMany({
+
+    const inventories = await this.prisma.roomInventory.findMany({
       where: { roomId, date: { gte: start, lte: end } },
     });
+
+    // Map inventories to the format frontend calendar expects
+    return inventories.map((inv) => ({
+      id: inv.id,
+      roomId: inv.roomId,
+      date: inv.date,
+      isAvailable:
+        (inv.totalStock === 0 ? 0 : (room as any).qty) - inv.bookedStock > 0,
+    }));
   }
 }
