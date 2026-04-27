@@ -80,6 +80,18 @@ export class AuthController {
     res.status(200).send(result);
   };
 
+  checkVerificationToken = async (req: Request, res: Response) => {
+    const result = await this.authService.checkVerificationToken(
+      req.body.token,
+    );
+    res.status(200).send(result);
+  };
+
+  checkResetToken = async (req: Request, res: Response) => {
+    const result = await this.authService.checkResetToken(req.body.token);
+    res.status(200).send(result);
+  };
+
   resendVerification = async (req: Request, res: Response) => {
     const result = await this.authService.resendVerification(req.body.email);
     res.status(200).send(result);

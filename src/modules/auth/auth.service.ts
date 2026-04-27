@@ -16,6 +16,7 @@ import {
   generateRefreshToken,
 } from "../../utils/token.utils.js";
 import axios from "axios";
+import crypto from "crypto";
 
 export class AuthService {
   constructor(
@@ -25,10 +26,10 @@ export class AuthService {
 
   // ─── EMAIL REGISTER ──────────────────────────────────────────────────────────
   async register(body: RegisterDto) {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: body.email },
+    const existing = await this.prisma.user.findFirst({
+      where: { email: body.email, deletedAt: null },
     });
-    if (existing) throw new ApiError("Email Already Exist", 400);
+    if (existing) throw new ApiError("Email already in use", 400);
 
     const user = await this.prisma.user.create({
       data: {
@@ -53,7 +54,12 @@ export class AuthService {
 
   private async createVerificationToken(user: User) {
     const token = jwt.sign(
-      { id: user.id, email: user.email, purpose: "verify-email" },
+      {
+        id: user.id,
+        email: user.email,
+        purpose: "verify-email",
+        jti: crypto.randomUUID(),
+      },
       process.env.JWT_SECRET!,
       { expiresIn: "1h" },
     );
@@ -103,9 +109,47 @@ export class AuthService {
     return { message: "Email verified successfully. You can now login." };
   }
 
+  async checkVerificationToken(token: string) {
+    try {
+      jwt.verify(token, process.env.JWT_SECRET!);
+    } catch {
+      return { valid: false, message: "expired" };
+    }
+
+    const request = await this.prisma.emailVerification.findFirst({
+      where: { token, expiresAt: { gt: new Date() }, used: false },
+    });
+
+    if (!request) {
+      return { valid: false, message: "invalid" };
+    }
+
+    return { valid: true };
+  }
+
+  async checkResetToken(token: string) {
+    try {
+      jwt.verify(token, process.env.JWT_SECRET!);
+    } catch {
+      return { valid: false, message: "expired" };
+    }
+
+    const request = await this.prisma.passwordReset.findFirst({
+      where: { token, expiresAt: { gt: new Date() }, used: false },
+    });
+
+    if (!request) {
+      return { valid: false, message: "invalid" };
+    }
+
+    return { valid: true };
+  }
+
   // ─── RESEND VERIFICATION ──────────────────────────────────────────────────────
   async resendVerification(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null },
+    });
     if (!user) throw new ApiError("User not found", 404);
     if (user.isVerified) throw new ApiError("Account is already verified", 400);
 
@@ -121,8 +165,8 @@ export class AuthService {
 
   // ─── EMAIL LOGIN ──────────────────────────────────────────────────────────────
   async login(body: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: body.email },
+    const user = await this.prisma.user.findFirst({
+      where: { email: body.email, deletedAt: null },
     });
 
     if (!user) {
@@ -195,8 +239,8 @@ export class AuthService {
     }
 
     // 2. Find or create user
-    let user = await this.prisma.user.findUnique({
-      where: { email: googleUser.email },
+    let user = await this.prisma.user.findFirst({
+      where: { email: googleUser.email, deletedAt: null },
     });
 
     if (!user) {
@@ -210,6 +254,16 @@ export class AuthService {
           role: null, // Must complete onboarding
           provider: "google",
           isVerified: true,
+        },
+      });
+    } else {
+      // Update existing user if needed (e.g. mark as verified if logging in via Google)
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          isVerified: true,
+          provider: "google", // Update provider to google to avoid password confusion
+          profilePicture: user.profilePicture || googleUser.picture || null,
         },
       });
     }
@@ -234,8 +288,8 @@ export class AuthService {
 
   // ─── ONBOARDING ───────────────────────────────────────────────────────────────
   async onboarding(userId: string, body: OnboardingDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
     });
 
     if (!user) throw new ApiError("User not found", 404);
@@ -321,30 +375,46 @@ export class AuthService {
 
     const stored = await this.prisma.refreshToken.findUnique({
       where: { token: refreshToken },
-      include: { user: true },
+      include: {
+        user: true,
+      },
     });
 
-    if (!stored || stored.expiredAt < new Date()) {
+    const castedStored = stored as any;
+    if (
+      !stored ||
+      !castedStored.user ||
+      castedStored.user.deletedAt ||
+      stored.expiredAt < new Date()
+    ) {
       throw new ApiError("Refresh token expired or invalid", 401);
     }
 
     return {
       accessToken: generateAccessToken({
-        id: stored.user.id,
-        role: stored.user.role,
+        id: castedStored.user.id,
+        role: castedStored.user.role,
       }),
     };
   }
 
   async forgotPassword(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (user) await this.createResetToken(user);
+    const user = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null },
+    });
+    if (user) {
+      await this.prisma.passwordReset.updateMany({
+        where: { userId: user.id, used: false },
+        data: { used: true },
+      });
+      await this.createResetToken(user);
+    }
     return { message: "If registered, you will receive a reset link" };
   }
 
   private async createResetToken(user: User) {
     const token = jwt.sign(
-      { id: user.id, purpose: "reset-password" },
+      { id: user.id, purpose: "reset-password", jti: crypto.randomUUID() },
       process.env.JWT_SECRET!,
       { expiresIn: "1h" },
     );
@@ -388,8 +458,8 @@ export class AuthService {
   }
 
   async getProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
       select: {
         id: true,
         name: true,

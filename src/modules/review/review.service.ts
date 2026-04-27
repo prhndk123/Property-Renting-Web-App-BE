@@ -41,20 +41,20 @@ export class ReviewService {
     if (now < checkoutDate)
       throw new ApiError("Can only review after checkout date", 400);
 
-    const existing = await this.prisma.review.findUnique({
-      where: { reservationId },
+    const existing = await this.prisma.review.findFirst({
+      where: { reservationId, deletedAt: null },
     });
     if (existing) throw new ApiError("Already reviewed", 400);
     return res;
   }
 
   async createReply(tenantId: string, reviewId: string, data: CreateReplyDto) {
-    const review = await this.prisma.review.findUnique({
-      where: { id: reviewId },
+    const review = await this.prisma.review.findFirst({
+      where: { id: reviewId, deletedAt: null },
       include: { reservation: { include: { property: true } } },
     });
-    if (!review) throw new ApiError("Review not found", 404);
-    if (review.reservation.property.tenantId !== tenantId)
+    const castedReview = review as any;
+    if (!review || castedReview.reservation.property.tenantId !== tenantId)
       throw new ApiError("Forbidden", 403);
 
     return this.prisma.reviewReply.create({
@@ -64,7 +64,11 @@ export class ReviewService {
 
   async getReviews(query: GetReviewsQueryDto & { tenantId?: string }) {
     const { page, take, propertyId, userId, tenantId } = query;
-    const where: Prisma.ReviewWhereInput = { propertyId, userId };
+    const where: Prisma.ReviewWhereInput = {
+      propertyId,
+      userId,
+      deletedAt: null,
+    };
 
     if (tenantId) {
       where.property = { tenantId };

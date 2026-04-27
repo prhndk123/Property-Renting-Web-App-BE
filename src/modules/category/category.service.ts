@@ -26,6 +26,7 @@ export class CategoryService {
     console.log("[CategoryService] Sanitized params:", { page, take, search });
 
     const where: Prisma.PropertyCategoryWhereInput = {
+      deletedAt: null,
       ...(tenantId ? { tenantId } : {}),
       ...(search
         ? { name: { contains: search, mode: "insensitive" as const } }
@@ -64,8 +65,8 @@ export class CategoryService {
   }
 
   async getCategoryById(id: string) {
-    const category = await this.prisma.propertyCategory.findUnique({
-      where: { id },
+    const category = await this.prisma.propertyCategory.findFirst({
+      where: { id, deletedAt: null },
       include: { _count: { select: { properties: true } } },
     });
     if (!category) throw new ApiError("Category not found", 404);
@@ -81,6 +82,7 @@ export class CategoryService {
     const existing = await this.prisma.propertyCategory.findFirst({
       where: {
         tenantId,
+        deletedAt: null,
         name: { equals: trimmedName, mode: "insensitive" as Prisma.QueryMode },
       },
     });
@@ -96,8 +98,8 @@ export class CategoryService {
   }
 
   async updateCategory(id: string, tenantId: string, data: UpdateCategoryDto) {
-    const category = await this.prisma.propertyCategory.findUnique({
-      where: { id },
+    const category = await this.prisma.propertyCategory.findFirst({
+      where: { id, deletedAt: null },
     });
     if (!category) throw new ApiError("Category not found", 404);
     if (category.tenantId !== tenantId) throw new ApiError("Unauthorized", 403);
@@ -112,6 +114,7 @@ export class CategoryService {
       const existing = await this.prisma.propertyCategory.findFirst({
         where: {
           tenantId,
+          deletedAt: null,
           name: {
             equals: trimmedName,
             mode: "insensitive" as Prisma.QueryMode,
@@ -131,9 +134,11 @@ export class CategoryService {
   }
 
   async deleteCategory(id: string, tenantId: string) {
-    const category = await this.prisma.propertyCategory.findUnique({
-      where: { id },
-      include: { _count: { select: { properties: true } } },
+    const category = await this.prisma.propertyCategory.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        _count: { select: { properties: { where: { deletedAt: null } } } },
+      },
     });
     if (!category) throw new ApiError("Category not found", 404);
     if (category.tenantId !== tenantId) throw new ApiError("Unauthorized", 403);
@@ -144,7 +149,10 @@ export class CategoryService {
       );
     }
 
-    await this.prisma.propertyCategory.delete({ where: { id } });
-    return { message: "Category deleted successfully" };
+    await this.prisma.propertyCategory.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { message: "Category deleted successfully (soft delete)" };
   }
 }

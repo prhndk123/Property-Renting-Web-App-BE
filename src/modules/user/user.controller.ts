@@ -42,4 +42,39 @@ export class UserController {
     const result = await this.userService.deleteUser(req.params.id as string);
     res.status(200).send(result);
   };
+
+  getSavedProperties = async (req: Request, res: Response) => {
+    const result = await this.userService.getSavedProperties(
+      res.locals.user.id,
+    );
+    res.status(200).send(result);
+  };
+
+  getSavedPropertyIds = async (req: Request, res: Response) => {
+    const result = await this.userService.getSavedPropertyIds(
+      res.locals.user.id,
+    );
+    res.status(200).send(result);
+  };
+
+  addPaymentMethod = async (req: Request, res: Response) => {
+    const result = await this.userService.addPaymentMethod(
+      res.locals.user.id,
+      req.body,
+    );
+    res.status(201).send(result);
+  };
+
+  getPaymentMethods = async (req: Request, res: Response) => {
+    const result = await this.userService.getPaymentMethods(res.locals.user.id);
+    res.status(200).send(result);
+  };
+
+  deletePaymentMethod = async (req: Request, res: Response) => {
+    const result = await this.userService.deletePaymentMethod(
+      res.locals.user.id,
+      req.params.methodId as string,
+    );
+    res.status(200).send(result);
+  };
 }

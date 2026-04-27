@@ -99,4 +99,13 @@ export class PropertyController {
     const result = await this.propertyService.getLocations(search);
     res.status(200).send(result);
   };
+
+  toggleSaveProperty = async (req: Request, res: Response) => {
+    const userId = (req as AuthRequest).user?.id!;
+    const result = await this.propertyService.toggleSaveProperty(
+      req.params.id as string,
+      userId,
+    );
+    res.status(200).send(result);
+  };
 }
