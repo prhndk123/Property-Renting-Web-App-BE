@@ -1,4 +1,0 @@
-﻿src/modules/cloudinary/cloudinary.service.ts(1,19): error TS2307: Cannot find module 'axios' or its corresponding type declarations.
-src/modules/cloudinary/cloudinary.service.ts(3,22): error TS2307: Cannot find module 'form-data' or its corresponding type declarations.
-src/modules/cron/cron.service.ts(1,18): error TS2307: Cannot find module 'node-cron' or its corresponding type declarations.
-src/modules/mail/mail.service.ts(2,24): error TS2307: Cannot find module 'handlebars' or its corresponding type declarations.
