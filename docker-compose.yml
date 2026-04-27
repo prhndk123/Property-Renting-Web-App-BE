@@ -22,7 +22,7 @@ services:
     container_name: postgres_finpro
     restart: always
     volumes:
-      - ./docker/postgres:/var/lib/postgresql/data
+      - ./docker/postgres:/var/lib/postgresql
     ports:
       - "6543:5432"
     environment:

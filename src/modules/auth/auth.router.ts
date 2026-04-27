@@ -62,6 +62,11 @@ export class AuthRouter {
       this.authController.verifyEmail,
     );
     this.router.post(
+      "/check-verification-token",
+      this.authController.checkVerificationToken,
+    );
+    this.router.post("/check-reset-token", this.authController.checkResetToken);
+    this.router.post(
       "/resend-verification",
       this.validationMiddleware.validateBody(ResendVerificationDto),
       this.authController.resendVerification,

@@ -49,10 +49,10 @@ export class ReservationService {
       await this.createResPayment(tx, res.id, paymentMethod, invoiceUrl);
 
       // Block dates immediately on WAITING_PAYMENT
-      await this.toggleDatesAvailability(
+      await this.updateInventoryStock(
         tx,
-        { ...res, reservationRooms: [{ roomId }] },
-        false,
+        { ...res, reservationRooms: [{ roomId, qty: 1 }] },
+        true, // isBooking = true (increment stock)
       );
 
       return { ...res, invoiceUrl };
@@ -119,11 +119,13 @@ export class ReservationService {
     info: any,
   ) {
     if (method !== "PAYMENT_GATEWAY") return null;
-    const user = await tx.user.findUnique({ where: { id: userId } });
+    const user = await tx.user.findFirst({
+      where: { id: userId, deletedAt: null },
+    });
     const invoice = await this.xenditService.createInvoice({
       externalId: resId,
       amount: Number(info.totalPrice),
-      payerEmail: user?.email || "guest@example.com",
+      payerEmail: user?.email || "guest@example.com", // Fallback email is required by Xendit
       description: `Payment for Reservation ${resId}`,
     });
     return (invoice as any).invoiceUrl || (invoice as any).invoice_url;
@@ -201,7 +203,11 @@ export class ReservationService {
           images: true,
         },
       },
-      reservationRooms: { include: { room: true } },
+      reservationRooms: {
+        include: {
+          room: true,
+        },
+      },
       payment: true,
       review: {
         include: {
@@ -214,15 +220,16 @@ export class ReservationService {
   // ─── GET SINGLE RESERVATION ─────────────────────────────────────────
 
   async getReservationById(resId: string, userId: string, role: string | null) {
-    const res = await this.prisma.reservation.findUnique({
+    const res = await this.prisma.reservation.findFirst({
       where: { id: resId },
       include: this.reservationInclude(),
     });
     if (!res) throw new ApiError("Reservation not found", 404);
 
+    const castedRes = res as any;
     // Scope check: user can only see own reservations, tenant sees their properties
     if (role === "TENANT") {
-      if (res.property.tenantId !== userId)
+      if (castedRes.property?.tenantId !== userId)
         throw new ApiError("Forbidden", 403);
     } else {
       if (res.userId !== userId) throw new ApiError("Not found", 404);
@@ -272,8 +279,8 @@ export class ReservationService {
         data: { status: "CONFIRMED" },
       });
       // Already blocked on creation, so no need to block again,
-      // but toggleDatesAvailability is idempotent (using upsert), so it's safe.
-      await this.toggleDatesAvailability(tx, res, false);
+      // but updateInventoryStock is idempotent (using upsert), so it's safe.
+      await this.updateInventoryStock(tx, res, true);
       await this.sendConfirmationEmail(res);
       return updated;
     });
@@ -308,7 +315,7 @@ export class ReservationService {
         data: { status: "CANCELLED" },
       });
       // Release dates
-      await this.toggleDatesAvailability(tx, res, true);
+      await this.updateInventoryStock(tx, res, false);
       return { message: "Reservation cancelled successfully" };
     });
   }
@@ -329,7 +336,7 @@ export class ReservationService {
         data: { status: "CANCELLED" },
       });
       // Release dates
-      await this.toggleDatesAvailability(tx, res, true);
+      await this.updateInventoryStock(tx, res, false);
       return { message: "Reservation cancelled by tenant" };
     });
   }
@@ -341,11 +348,11 @@ export class ReservationService {
   // ─── XENDIT WEBHOOK ────────────────────────────────────────────────
 
   async handleXenditWebhook(payload: any) {
-    console.log("=== WEBHOOK HANDLER START ===");
-    console.log("Full payload:", JSON.stringify(payload, null, 2));
+    console.log("=== XENDIT WEBHOOK HANDLER START ===");
+    console.log("Full payload data:", JSON.stringify(payload, null, 2));
 
     const { external_id, status } = payload;
-    console.log(`Extracted: external_id="${external_id}", status="${status}"`);
+    console.log(`Webhook Received: ID=${external_id}, STATUS=${status}`);
 
     if (!external_id || status !== "PAID") {
       console.log(
@@ -396,7 +403,7 @@ export class ReservationService {
         data: { status: "CONFIRMED" },
       });
       console.log("TX: Toggling dates availability...");
-      await this.toggleDatesAvailability(tx, res, false);
+      await this.updateInventoryStock(tx, res, true);
       console.log("TX: Sending confirmation email...");
       await this.sendConfirmationEmail(res);
       console.log("=== WEBHOOK HANDLER COMPLETE - RESERVATION CONFIRMED ===");
@@ -407,49 +414,65 @@ export class ReservationService {
   // ─── HELPERS ───────────────────────────────────────────────────────
 
   private async findUserReservation(resId: string, userId: string) {
-    const res = await this.prisma.reservation.findUnique({
+    const res = await this.prisma.reservation.findFirst({
       where: { id: resId },
-      include: { reservationRooms: true },
+      include: {
+        reservationRooms: {
+          include: { room: true },
+        },
+      },
     });
     if (!res || res.userId !== userId) throw new ApiError("Not found", 404);
     return res;
   }
 
   private async findTenantReservation(resId: string, tenantId: string) {
-    const res = await this.prisma.reservation.findUnique({
+    const res = await this.prisma.reservation.findFirst({
       where: { id: resId },
       include: this.reservationInclude(),
     });
-    if (!res || res.property.tenantId !== tenantId)
+    const castedRes = res as any;
+    if (!res || castedRes.property?.tenantId !== tenantId)
       throw new ApiError("Forbidden", 403);
     return res;
   }
 
-  private async toggleDatesAvailability(
-    tx: any,
-    res: any,
-    isAvailable: boolean,
-  ) {
+  private async updateInventoryStock(tx: any, res: any, isBooking: boolean) {
     const nights = this.calcNights(res.checkinDate, res.checkoutDate);
-
-    // Ensure reservationRooms are populated for existing records
     const rooms = res.reservationRooms || [];
 
     for (const rr of rooms) {
+      // rr.qty could be undefined if it's from old data, fallback to 1
+      const qty = rr.qty || 1;
+
       for (let i = 0; i < nights; i++) {
         const date = new Date(res.checkinDate);
         date.setDate(date.getDate() + i);
-        await tx.roomAvailability.upsert({
+
+        // Find current room default stock if we need to create
+        const room = await tx.room.findFirst({
+          where: { id: rr.roomId, deletedAt: null },
+        });
+        const defaultStock = room?.qty || 1;
+
+        await tx.roomInventory.upsert({
           where: { roomId_date: { roomId: rr.roomId, date } },
-          update: { isAvailable },
-          create: { roomId: rr.roomId, date, isAvailable },
+          update: {
+            bookedStock: isBooking ? { increment: qty } : { decrement: qty },
+          },
+          create: {
+            roomId: rr.roomId,
+            date,
+            totalStock: defaultStock,
+            bookedStock: isBooking ? qty : 0,
+          },
         });
       }
     }
   }
 
   private async markDatesUnavailable(tx: any, res: any) {
-    return this.toggleDatesAvailability(tx, res, false);
+    return this.updateInventoryStock(tx, res, true);
   }
 
   private calcNights(checkin: Date, checkout: Date) {

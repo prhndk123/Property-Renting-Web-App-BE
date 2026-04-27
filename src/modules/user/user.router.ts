@@ -6,6 +6,7 @@ import {
   GetUsersQueryDto,
   UpdatePasswordDto,
   UpdateProfileDto,
+  CreatePaymentMethodDto,
 } from "./dto/user.dto.js";
 
 export class UserRouter {
@@ -25,6 +26,32 @@ export class UserRouter {
       "/",
       this.validationMiddleware.validateQuery(GetUsersQueryDto),
       this.userController.getUsers,
+    );
+    this.router.get(
+      "/me/saved-properties",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.userController.getSavedProperties,
+    );
+    this.router.get(
+      "/me/saved-properties/ids",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.userController.getSavedPropertyIds,
+    );
+    this.router.get(
+      "/me/payment-methods",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.userController.getPaymentMethods,
+    );
+    this.router.post(
+      "/me/payment-methods",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.validationMiddleware.validateBody(CreatePaymentMethodDto),
+      this.userController.addPaymentMethod,
+    );
+    this.router.delete(
+      "/me/payment-methods/:methodId",
+      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
+      this.userController.deletePaymentMethod,
     );
     this.router.get("/:id", this.userController.getUser);
     this.router.patch("/:id", this.userController.updateUser);

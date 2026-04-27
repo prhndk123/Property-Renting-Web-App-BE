@@ -16,7 +16,7 @@ export class CronService {
   // ─── Auto-cancel unpaid reservations after 1 hour ─────────────────
 
   private scheduleAutoCancelUnpaid() {
-    cron.schedule("*/15 * * * *", async () => {
+    cron.schedule("* * * * *", async () => {
       try {
         await this.autoCancelExpired();
       } catch (e) {

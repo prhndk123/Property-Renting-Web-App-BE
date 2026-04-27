@@ -60,3 +60,21 @@ export class GetUsersQueryDto {
   @IsString()
   sortOrder?: "asc" | "desc";
 }
+
+export class CreatePaymentMethodDto {
+  @IsNotEmpty()
+  @IsString()
+  cardName!: string;
+
+  @IsNotEmpty()
+  @IsString()
+  cardNumber!: string; // Only last 4 will be saved
+
+  @IsNotEmpty()
+  @IsString()
+  expiry!: string;
+
+  @IsOptional()
+  @IsString()
+  brand?: string;
+}

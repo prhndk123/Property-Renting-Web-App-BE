@@ -104,6 +104,7 @@ export class PropertyService {
     // ── Build WHERE clause ──
     // Only show properties that have at least one room (i.e., some availability)
     const where: Prisma.PropertyWhereInput = {
+      deletedAt: null,
       city: destination
         ? { contains: destination, mode: "insensitive" }
         : undefined,
@@ -112,6 +113,7 @@ export class PropertyService {
       // Must have at least one room
       rooms: {
         some: {
+          deletedAt: null,
           ...roomFilter,
         },
       },
@@ -247,63 +249,94 @@ export class PropertyService {
     if (isUuid) return this.getPropertyById(slug, query);
 
     const { startDate, endDate } = query || {};
-    const roomFilter: Prisma.RoomWhereInput = {};
-    if (startDate && endDate) {
-      roomFilter.availability = {
-        none: {
-          date: { gte: new Date(startDate), lt: new Date(endDate) },
-          isAvailable: false,
-        },
-      };
-    }
 
-    const property = await this.prisma.property.findUnique({
-      where: { slug },
+    const property = await this.prisma.property.findFirst({
+      where: { slug, deletedAt: null },
       include: {
         category: true,
         images: true,
         rooms: {
-          where: roomFilter,
-          include: { images: true, availability: true },
+          where: { deletedAt: null },
+          include: { images: true, inventories: true, peakSeasonRates: true },
         },
         tenant: { select: { name: true, profilePicture: true } },
       },
     });
     if (!property) throw new ApiError("Property not found", 404);
+
+    // Filter available rooms in memory based on inventory
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      property.rooms = property.rooms.filter((room) => {
+        let isAvailable = true;
+        // Check each night
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          const dStr = d.toISOString().split("T")[0];
+          const inv = room.inventories.find(
+            (i) => i.date.toISOString().split("T")[0] === dStr,
+          );
+          const totalStock = inv?.totalStock === 0 ? 0 : room.qty;
+          const bookedStock = inv?.bookedStock ?? 0;
+          if (totalStock - bookedStock < 1) {
+            isAvailable = false;
+            break;
+          }
+        }
+        return isAvailable;
+      });
+    }
+
     return property;
   }
 
   async getPropertyById(id: string, query?: any) {
     const { startDate, endDate } = query || {};
-    const roomFilter: Prisma.RoomWhereInput = {};
-    if (startDate && endDate) {
-      roomFilter.availability = {
-        none: {
-          date: { gte: new Date(startDate), lt: new Date(endDate) },
-          isAvailable: false,
-        },
-      };
-    }
 
-    const property = await this.prisma.property.findUnique({
-      where: { id },
+    const property = await this.prisma.property.findFirst({
+      where: { id, deletedAt: null },
       include: {
         category: true,
         images: true,
         rooms: {
-          where: roomFilter,
-          include: { images: true, availability: true },
+          where: { deletedAt: null },
+          include: { images: true, inventories: true, peakSeasonRates: true },
         },
         tenant: { select: { name: true, profilePicture: true } },
       },
     });
     if (!property) throw new ApiError("Property not found", 404);
+
+    // Filter available rooms in memory based on inventory
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      property.rooms = property.rooms.filter((room) => {
+        let isAvailable = true;
+        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+          const dStr = d.toISOString().split("T")[0];
+          const inv = room.inventories.find(
+            (i) => i.date.toISOString().split("T")[0] === dStr,
+          );
+          const totalStock = inv?.totalStock === 0 ? 0 : room.qty;
+          const bookedStock = inv?.bookedStock ?? 0;
+          if (totalStock - bookedStock < 1) {
+            isAvailable = false;
+            break;
+          }
+        }
+        return isAvailable;
+      });
+    }
+
     return property;
   }
 
   async updateProperty(id: string, tenantId: string, data: UpdatePropertyDto) {
-    const property = await this.prisma.property.findUnique({
-      where: { id },
+    const property = await this.prisma.property.findFirst({
+      where: { id, deletedAt: null },
       include: { images: true },
     });
     if (!property) throw new ApiError("Property not found", 404);
@@ -355,8 +388,8 @@ export class PropertyService {
   }
 
   async deleteProperty(id: string, tenantId: string) {
-    const property = await this.prisma.property.findUnique({
-      where: { id },
+    const property = await this.prisma.property.findFirst({
+      where: { id, deletedAt: null },
       include: { images: true },
     });
     if (!property) throw new ApiError("Property not found", 404);
@@ -374,12 +407,23 @@ export class PropertyService {
       }
     }
 
-    await this.prisma.property.delete({ where: { id } });
-    return { message: "Property deleted successfully" };
+    await this.prisma.$transaction([
+      this.prisma.property.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      }),
+      this.prisma.room.updateMany({
+        where: { propertyId: id },
+        data: { deletedAt: new Date() },
+      }),
+    ]);
+    return { message: "Property deleted successfully (soft delete)" };
   }
 
   async getCategories() {
-    return this.prisma.propertyCategory.findMany();
+    return this.prisma.propertyCategory.findMany({
+      where: { deletedAt: null },
+    });
   }
 
   async getTenantProperties(
@@ -390,6 +434,7 @@ export class PropertyService {
 
     const where: Prisma.PropertyWhereInput = {
       tenantId,
+      deletedAt: null,
       ...(search
         ? { name: { contains: search, mode: "insensitive" as const } }
         : {}),
@@ -432,21 +477,67 @@ export class PropertyService {
   }
 
   async getLocations(search?: string) {
-    const whereClause = search
-      ? { city: { contains: search, mode: Prisma.QueryMode.insensitive } }
-      : {};
+    const whereClause: Prisma.PropertyWhereInput = {
+      deletedAt: null,
+      ...(search
+        ? {
+            city: {
+              contains: search,
+              mode: Prisma.QueryMode.insensitive as Prisma.QueryMode,
+            },
+          }
+        : {}),
+    };
 
     const properties = await this.prisma.property.findMany({
       where: whereClause,
       select: { city: true },
       distinct: ["city"],
       orderBy: { city: "asc" },
-      take: 10, // Limit to 10 results for scalable UI
+      take: 10,
     });
 
     return properties.map((p) => ({
       label: p.city,
       value: p.city.toLowerCase(),
     }));
+  }
+
+  async toggleSaveProperty(id: string, userId: string) {
+    const property = await this.prisma.property.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!property) throw new ApiError("Property not found", 404);
+
+    const existing = await this.prisma.savedProperty.findUnique({
+      where: {
+        userId_propertyId: {
+          userId,
+          propertyId: id,
+        },
+      },
+    });
+
+    if (existing && !existing.deletedAt) {
+      await this.prisma.savedProperty.update({
+        where: { id: existing.id },
+        data: { deletedAt: new Date() },
+      });
+      return { isSaved: false, message: "Property removed from saved." };
+    } else if (existing && existing.deletedAt) {
+      await this.prisma.savedProperty.update({
+        where: { id: existing.id },
+        data: { deletedAt: null },
+      });
+      return { isSaved: true, message: "Property saved successfully." };
+    } else {
+      await this.prisma.savedProperty.create({
+        data: {
+          userId,
+          propertyId: id,
+        },
+      });
+      return { isSaved: true, message: "Property saved successfully." };
+    }
   }
 }

@@ -36,16 +36,16 @@ export class RoomService {
         });
       }
 
-      return tx.room.findUnique({
-        where: { id: room.id },
+      return tx.room.findFirst({
+        where: { id: room.id, deletedAt: null },
         include: { images: true },
       });
     });
   }
 
   private async verifyPropertyOwner(propertyId: string, tenantId: string) {
-    const prop = await this.prisma.property.findUnique({
-      where: { id: propertyId },
+    const prop = await this.prisma.property.findFirst({
+      where: { id: propertyId, deletedAt: null },
     });
     if (!prop) throw new ApiError("Property not found", 404);
     if (prop.tenantId !== tenantId) throw new ApiError("Unauthorized", 403);
@@ -53,8 +53,8 @@ export class RoomService {
   }
 
   async getRoomById(id: string) {
-    const room = await this.prisma.room.findUnique({
-      where: { id },
+    const room = await this.prisma.room.findFirst({
+      where: { id, deletedAt: null },
       include: {
         images: true,
         property: { include: { images: true, category: true } },
@@ -67,12 +67,13 @@ export class RoomService {
   }
 
   async updateRoom(id: string, tenantId: string, data: UpdateRoomDto) {
-    const room = await this.prisma.room.findUnique({
-      where: { id },
+    const room = await this.prisma.room.findFirst({
+      where: { id, deletedAt: null },
       include: { property: true, images: true },
     });
     if (!room) throw new ApiError("Room not found", 404);
-    if (room.property.tenantId !== tenantId)
+    const castedRoom = room as any;
+    if (castedRoom.property.tenantId !== tenantId)
       throw new ApiError("Unauthorized", 403);
 
     const { imageUrls, removedImageIds, ...updateData } = data;
@@ -85,7 +86,7 @@ export class RoomService {
 
       // Handle removed images
       if (removedImageIds && removedImageIds.length > 0) {
-        const imagesToRemove = room.images.filter((img) =>
+        const imagesToRemove = castedRoom.images.filter((img: any) =>
           removedImageIds.includes(img.id),
         );
 
@@ -112,24 +113,25 @@ export class RoomService {
         });
       }
 
-      return tx.room.findUnique({
-        where: { id },
+      return tx.room.findFirst({
+        where: { id, deletedAt: null },
         include: { images: true },
       });
     });
   }
 
   async deleteRoom(id: string, tenantId: string) {
-    const room = await this.prisma.room.findUnique({
-      where: { id },
+    const room = await this.prisma.room.findFirst({
+      where: { id, deletedAt: null },
       include: { property: true, images: true },
     });
     if (!room) throw new ApiError("Room not found", 404);
-    if (room.property.tenantId !== tenantId)
+    const castedRoom = room as any;
+    if (castedRoom.property.tenantId !== tenantId)
       throw new ApiError("Unauthorized", 403);
 
     // Delete all images from cloudinary
-    for (const img of room.images) {
+    for (const img of castedRoom.images) {
       try {
         await this.cloudinaryService.removeByUrl(img.imageUrl);
       } catch (e) {
@@ -137,13 +139,16 @@ export class RoomService {
       }
     }
 
-    await this.prisma.room.delete({ where: { id } });
-    return { message: "Room deleted successfully" };
+    await this.prisma.room.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { message: "Room deleted successfully (soft delete)" };
   }
 
   async getRooms(query: GetRoomsQueryDto) {
     const { page, take, propertyId } = query;
-    const where: Prisma.RoomWhereInput = { propertyId };
+    const where: Prisma.RoomWhereInput = { propertyId, deletedAt: null };
     const [data, total] = await Promise.all([
       this.prisma.room.findMany({
         where,

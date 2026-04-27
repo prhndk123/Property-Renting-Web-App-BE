@@ -19,14 +19,16 @@ export class ReservationRouter {
   }
 
   private initRoutes = () => {
-    // Public webhook (no auth)
-    this.router.post("/webhook/xendit", this.ctrl.xenditWebhook);
-
     // Authenticated routes
     this.router.use(this.authMiddleware.verifyToken(process.env.JWT_SECRET!));
 
     this.router.get(
       "/",
+      this.validationMiddleware.validateQuery(GetReservationsQueryDto),
+      this.ctrl.getReservations,
+    );
+    this.router.get(
+      "/my",
       this.validationMiddleware.validateQuery(GetReservationsQueryDto),
       this.ctrl.getReservations,
     );

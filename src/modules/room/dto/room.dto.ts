@@ -28,6 +28,12 @@ export class CreateRoomDto {
   @Min(1)
   capacity!: number;
 
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsNumber()
+  @Min(1)
+  qty?: number;
+
   @IsNotEmpty()
   @Transform(({ value }) => Number(value))
   @IsNumber()
@@ -54,6 +60,12 @@ export class UpdateRoomDto {
   @IsNumber()
   @Min(1)
   capacity?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsNumber()
+  @Min(1)
+  qty?: number;
 
   @IsOptional()
   @Transform(({ value }) => Number(value))
