@@ -1,8 +1,11 @@
 import { App } from "./app.js";
 
-const main = () => {
-  const app = new App();
-  app.start();
-};
+const appInstance = new App();
+const app = appInstance.app;
 
-main();
+// Hanya jalankan app.start() jika tidak sedang di deploy di Vercel/Production
+if (process.env.NODE_ENV !== "production") {
+  appInstance.start();
+}
+
+export default app;
