@@ -8,8 +8,23 @@
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "methods": ["OPTIONS"],
+      "headers": {
+        "Access-Control-Allow-Origin": "https://rentivo.tmmin.online",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true"
+      },
+      "status": 204
+    },
+    {
       "src": "/(.*)",
-      "dest": "/src/index.ts"
+      "dest": "/src/index.ts",
+      "headers": {
+        "Access-Control-Allow-Origin": "https://rentivo.tmmin.online",
+        "Access-Control-Allow-Credentials": "true"
+      }
     }
   ]
 }
