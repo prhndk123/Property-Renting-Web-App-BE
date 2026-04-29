@@ -1,7 +1,4 @@
-import {
-  PrismaClient,
-  Prisma,
-} from "../../../generated/prisma/client/index.js";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { ApiError } from "../../utils/api-error.js";
 import {
   CreatePropertyDto,
@@ -26,7 +23,7 @@ export class PropertyService {
     const { imageUrls, ...propertyData } = data;
     const slug = this.generateSlug(data.name);
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
       const property = await tx.property.create({
         data: { ...propertyData, tenantId, slug },
         include: { category: true },
@@ -152,10 +149,10 @@ export class PropertyService {
       });
 
       // Enrich with computed fields
-      const enriched = allProperties.map((p) => this.enrichProperty(p));
+      const enriched = allProperties.map((p: any) => this.enrichProperty(p));
 
       // Sort by price
-      enriched.sort((a, b) => {
+      enriched.sort((a: any, b: any) => {
         return sortOrder === "asc"
           ? a.lowestPrice - b.lowestPrice
           : b.lowestPrice - a.lowestPrice;
@@ -192,7 +189,7 @@ export class PropertyService {
         this.prisma.property.count({ where }),
       ]);
 
-      const data = rawData.map((p) => this.enrichProperty(p));
+      const data = rawData.map((p: any) => this.enrichProperty(p));
       const totalPages = Math.max(1, Math.ceil(total / take));
 
       return {
@@ -269,13 +266,13 @@ export class PropertyService {
       const start = new Date(startDate);
       const end = new Date(endDate);
 
-      property.rooms = property.rooms.filter((room) => {
+      property.rooms = property.rooms.filter((room: any) => {
         let isAvailable = true;
         // Check each night
         for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
           const dStr = d.toISOString().split("T")[0];
           const inv = room.inventories.find(
-            (i) => i.date.toISOString().split("T")[0] === dStr,
+            (i: any) => i.date.toISOString().split("T")[0] === dStr,
           );
           const totalStock = inv?.totalStock === 0 ? 0 : room.qty;
           const bookedStock = inv?.bookedStock ?? 0;
@@ -313,12 +310,12 @@ export class PropertyService {
       const start = new Date(startDate);
       const end = new Date(endDate);
 
-      property.rooms = property.rooms.filter((room) => {
+      property.rooms = property.rooms.filter((room: any) => {
         let isAvailable = true;
         for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
           const dStr = d.toISOString().split("T")[0];
           const inv = room.inventories.find(
-            (i) => i.date.toISOString().split("T")[0] === dStr,
+            (i: any) => i.date.toISOString().split("T")[0] === dStr,
           );
           const totalStock = inv?.totalStock === 0 ? 0 : room.qty;
           const bookedStock = inv?.bookedStock ?? 0;
@@ -344,7 +341,7 @@ export class PropertyService {
 
     const { imageUrls, removedImageIds, ...updateData } = data;
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
       // Update property basic info
       await tx.property.update({
         where: { id },
@@ -353,7 +350,7 @@ export class PropertyService {
 
       // Handle removed images
       if (removedImageIds && removedImageIds.length > 0) {
-        const imagesToRemove = property.images.filter((img) =>
+        const imagesToRemove = property.images.filter((img: any) =>
           removedImageIds.includes(img.id),
         );
 
@@ -497,7 +494,7 @@ export class PropertyService {
       take: 10,
     });
 
-    return properties.map((p) => ({
+    return properties.map((p: any) => ({
       label: p.city,
       value: p.city.toLowerCase(),
     }));

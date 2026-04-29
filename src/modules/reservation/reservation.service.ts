@@ -1,7 +1,4 @@
-import {
-  PrismaClient,
-  Prisma,
-} from "../../../generated/prisma/client/index.js";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { ApiError } from "../../utils/api-error.js";
 import { AvailabilityService } from "../availability/availability.service.js";
 import {
@@ -309,7 +306,7 @@ export class ReservationService {
         400,
       );
     }
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
       await tx.reservation.update({
         where: { id: resId },
         data: { status: "CANCELLED" },
@@ -330,7 +327,7 @@ export class ReservationService {
         400,
       );
     }
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
       await tx.reservation.update({
         where: { id: resId },
         data: { status: "CANCELLED" },

@@ -1,7 +1,4 @@
-import {
-  PrismaClient,
-  Prisma,
-} from "../../../generated/prisma/client/index.js";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { ApiError } from "../../utils/api-error.js";
 import {
   CreateRoomDto,
@@ -21,7 +18,7 @@ export class RoomService {
 
     const { imageUrls, ...roomData } = data;
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
       const room = await tx.room.create({
         data: roomData,
         include: { images: true },
@@ -78,7 +75,7 @@ export class RoomService {
 
     const { imageUrls, removedImageIds, ...updateData } = data;
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: any) => {
       await tx.room.update({
         where: { id },
         data: updateData,

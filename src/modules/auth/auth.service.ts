@@ -1,4 +1,4 @@
-import { PrismaClient, User } from "../../../generated/prisma/client/index.js";
+import { PrismaClient, User } from "@prisma/client";
 import { comparePassword, hashPassword } from "../../lib/argon.js";
 import { ApiError } from "../../utils/api-error.js";
 import jwt from "jsonwebtoken";

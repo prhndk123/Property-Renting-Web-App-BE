@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { PrismaClient } from "../../../generated/prisma/client/index.js";
+import { PrismaClient } from "@prisma/client";
 import { MailService } from "../mail/mail.service.js";
 
 export class CronService {
@@ -50,7 +50,7 @@ export class CronService {
 
   private async cancelExpiredReservation(res: any) {
     const resId = res.id;
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: any) => {
       await tx.payment.update({
         where: { reservationId: resId },
         data: { paymentStatus: "REJECTED" },

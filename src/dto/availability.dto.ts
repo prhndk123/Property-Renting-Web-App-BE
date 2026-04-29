@@ -8,7 +8,7 @@ import {
   IsUUID,
   Min,
 } from "class-validator";
-import { PriceType } from "../../generated/prisma/client/index.js";
+import { PriceType } from "@prisma/client";
 
 export class SetAvailabilityDto {
   @IsNotEmpty()

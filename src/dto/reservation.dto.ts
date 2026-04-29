@@ -9,7 +9,7 @@ import {
   Min,
 } from "class-validator";
 import { Transform } from "class-transformer";
-import { ReservationStatus } from "../../generated/prisma/client/index.js";
+import { ReservationStatus } from "@prisma/client";
 
 export class CreateReservationDto {
   @IsNotEmpty()
