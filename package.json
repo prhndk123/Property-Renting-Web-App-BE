@@ -15,7 +15,8 @@
     "format": "npx prettier --write .",
     "format:check": "npx prettier --check .",
     "lint-staged": "lint-staged",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",
