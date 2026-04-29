@@ -1,7 +1,4 @@
-import {
-  PrismaClient,
-  Prisma,
-} from "../../../generated/prisma/client/index.js";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { ApiError } from "../../utils/api-error.js";
 import {
   CreateReplyDto,

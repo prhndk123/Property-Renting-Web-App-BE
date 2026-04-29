@@ -1,8 +1,4 @@
-import {
-  PrismaClient,
-  Prisma,
-  User,
-} from "../../../generated/prisma/client/index.js";
+import { PrismaClient, Prisma, User } from "@prisma/client";
 import { ApiError } from "../../utils/api-error.js";
 import { comparePassword, hashPassword } from "../../lib/argon.js";
 import { CloudinaryService } from "../cloudinary/cloudinary.service.js";
@@ -147,12 +143,13 @@ export class UserService {
       orderBy: { createdAt: "desc" },
     });
 
-    return saved.map((s) => {
+    return saved.map((s: any) => {
       const p = s.property;
       const reviewCount = p.reviews.length;
       const averageRating =
         reviewCount > 0
-          ? p.reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviewCount
+          ? p.reviews.reduce((acc: number, curr: any) => acc + curr.rating, 0) /
+            reviewCount
           : 0;
 
       return {
@@ -175,7 +172,7 @@ export class UserService {
       where: { userId, deletedAt: null },
       select: { propertyId: true },
     });
-    return saved.map((s) => s.propertyId);
+    return saved.map((s: any) => s.propertyId);
   }
 
   async addPaymentMethod(userId: string, body: CreatePaymentMethodDto) {

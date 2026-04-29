@@ -7,7 +7,7 @@ import {
   IsOptional,
   IsUrl,
 } from "class-validator";
-import { UserRole } from "../../generated/prisma/client/index.js";
+import { UserRole } from "@prisma/client";
 
 export class RegisterDto {
   @IsEmail()

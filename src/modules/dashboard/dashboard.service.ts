@@ -1,4 +1,4 @@
-import { PrismaClient } from "../../../generated/prisma/client/index.js";
+import { PrismaClient } from "@prisma/client";
 
 export class DashboardService {
   constructor(private prisma: PrismaClient) {}
@@ -168,29 +168,31 @@ export class DashboardService {
     ]);
 
     // Enhance property info
-    const propertyIds = byProperty.map((p) => p.propertyId);
+    const propertyIds = byProperty.map((p: any) => p.propertyId);
     const propertyNames = await this.prisma.property.findMany({
       where: { id: { in: propertyIds } },
       select: { id: true, name: true },
     });
 
     // Enhance user info
-    const userIds = byUser.map((u) => u.userId);
+    const userIds = byUser.map((u: any) => u.userId);
     const userNames = await this.prisma.user.findMany({
       where: { id: { in: userIds } },
       select: { id: true, name: true, email: true },
     });
 
     return {
-      byProperty: byProperty.map((p) => ({
+      byProperty: byProperty.map((p: any) => ({
         ...p,
         name:
-          propertyNames.find((pn) => pn.id === p.propertyId)?.name || "Unknown",
+          propertyNames.find((pn: any) => pn.id === p.propertyId)?.name ||
+          "Unknown",
       })),
-      byUser: byUser.map((u) => ({
+      byUser: byUser.map((u: any) => ({
         ...u,
-        name: userNames.find((un) => un.id === u.userId)?.name || "Unknown",
-        email: userNames.find((un) => un.id === u.userId)?.email || "",
+        name:
+          userNames.find((un: any) => un.id === u.userId)?.name || "Unknown",
+        email: userNames.find((un: any) => un.id === u.userId)?.email || "",
       })),
       transactions,
     };
