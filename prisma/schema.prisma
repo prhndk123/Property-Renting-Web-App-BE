@@ -58,7 +58,7 @@ model User {
   emailVerifications EmailVerification[]
   passwordResets     PasswordReset[]
   refreshToken       RefreshToken?
-  categories         PropertyCategory[] @relation("TenantCategories")
+  subcategories      TenantSubcategory[] @relation("TenantSubcategories")
   properties         Property[] // Properties owned by tenant
   reservations       Reservation[] // Reservations made by user
   reviews            Review[]
@@ -124,25 +124,42 @@ model PasswordReset {
 
 model PropertyCategory {
   id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @db.Uuid
-  name      String
+  name      String   @unique
   deletedAt DateTime?
   createdAt DateTime @default(now())
 
   // Relations
-  tenant     User       @relation("TenantCategories", fields: [tenantId], references: [id], onDelete: Cascade)
+  properties          Property[]
+  tenantSubcategories TenantSubcategory[]
+
+  @@index([deletedAt])
+  @@map("property_categories")
+}
+
+model TenantSubcategory {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  categoryId String   @db.Uuid
+  name       String
+  deletedAt  DateTime?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  tenant     User             @relation("TenantSubcategories", fields: [tenantId], references: [id], onDelete: Cascade)
+  category   PropertyCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   properties Property[]
 
   @@unique([name, tenantId])
   @@index([tenantId])
   @@index([deletedAt])
-  @@map("property_categories")
+  @@map("tenant_subcategories")
 }
 
 model Property {
   id          String   @id @default(uuid()) @db.Uuid
   tenantId    String   @db.Uuid
-  categoryId  String   @db.Uuid
+  categoryId            String   @db.Uuid
+  tenantSubcategoryId   String?  @db.Uuid
   name        String
   slug        String   @unique @default(uuid())
   description String   @db.Text
@@ -156,7 +173,8 @@ model Property {
 
   // Relations
   tenant       User             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category     PropertyCategory @relation(fields: [categoryId], references: [id])
+  category            PropertyCategory   @relation(fields: [categoryId], references: [id])
+  tenantSubcategory   TenantSubcategory? @relation(fields: [tenantSubcategoryId], references: [id], onDelete: SetNull)
   images       PropertyImage[]
   rooms        Room[]
   reservations Reservation[]

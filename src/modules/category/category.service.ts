@@ -15,14 +15,11 @@ export class CategoryService {
       tenantId,
     });
 
-    // Ensure numeric types for pagination
     const page = Number(query.page) || 1;
     const take = Number(query.take) || 50;
     const search = query.search;
 
-    console.log("[CategoryService] Sanitized params:", { page, take, search });
-
-    const where: Prisma.PropertyCategoryWhereInput = {
+    const where: Prisma.TenantSubcategoryWhereInput = {
       deletedAt: null,
       ...(tenantId ? { tenantId } : {}),
       ...(search
@@ -31,20 +28,19 @@ export class CategoryService {
     };
 
     try {
-      console.log("[CategoryService] Executing DB query...");
       const [data, total] = await Promise.all([
-        this.prisma.propertyCategory.findMany({
+        this.prisma.tenantSubcategory.findMany({
           where,
           take,
           skip: (page - 1) * take,
           orderBy: { name: "asc" },
           include: {
             _count: { select: { properties: true } },
+            category: true, // Include the master category relation
           },
         }),
-        this.prisma.propertyCategory.count({ where }),
+        this.prisma.tenantSubcategory.count({ where }),
       ]);
-      console.log("[CategoryService] DB query successful. Count:", total);
 
       return {
         data,
@@ -56,15 +52,14 @@ export class CategoryService {
         },
       };
     } catch (error) {
-      console.error("[CategoryService] DB Query failed:", error);
       throw error;
     }
   }
 
   async getCategoryById(id: string) {
-    const category = await this.prisma.propertyCategory.findFirst({
+    const category = await this.prisma.tenantSubcategory.findFirst({
       where: { id, deletedAt: null },
-      include: { _count: { select: { properties: true } } },
+      include: { _count: { select: { properties: true } }, category: true },
     });
     if (!category) throw new ApiError("Category not found", 404);
     return category;
@@ -75,8 +70,7 @@ export class CategoryService {
     const formattedName =
       trimmedName.charAt(0).toUpperCase() + trimmedName.slice(1).toLowerCase();
 
-    // Check for duplicate name within the same tenant (case-insensitive)
-    const existing = await this.prisma.propertyCategory.findFirst({
+    const existing = await this.prisma.tenantSubcategory.findFirst({
       where: {
         tenantId,
         deletedAt: null,
@@ -88,14 +82,20 @@ export class CategoryService {
       throw new ApiError("Category with this name already exists", 409);
     }
 
-    return this.prisma.propertyCategory.create({
-      data: { ...data, name: formattedName, tenantId },
-      include: { _count: { select: { properties: true } } },
+    const { masterCategoryId } = data as any; // Still using cast for now to avoid TS errors if DTO is not yet picked up by runtime
+
+    return this.prisma.tenantSubcategory.create({
+      data: {
+        name: formattedName,
+        tenantId,
+        categoryId: data.categoryId,
+      },
+      include: { _count: { select: { properties: true } }, category: true },
     });
   }
 
   async updateCategory(id: string, tenantId: string, data: UpdateCategoryDto) {
-    const category = await this.prisma.propertyCategory.findFirst({
+    const category = await this.prisma.tenantSubcategory.findFirst({
       where: { id, deletedAt: null },
     });
     if (!category) throw new ApiError("Category not found", 404);
@@ -108,7 +108,7 @@ export class CategoryService {
         trimmedName.charAt(0).toUpperCase() +
         trimmedName.slice(1).toLowerCase();
 
-      const existing = await this.prisma.propertyCategory.findFirst({
+      const existing = await this.prisma.tenantSubcategory.findFirst({
         where: {
           tenantId,
           deletedAt: null,
@@ -123,15 +123,20 @@ export class CategoryService {
       }
     }
 
-    return this.prisma.propertyCategory.update({
+    const masterCategoryId = (data as any).categoryId;
+
+    return this.prisma.tenantSubcategory.update({
       where: { id },
-      data: { ...data, ...(formattedName && { name: formattedName }) },
-      include: { _count: { select: { properties: true } } },
+      data: {
+        ...(formattedName && { name: formattedName }),
+        ...(masterCategoryId && { categoryId: masterCategoryId }),
+      },
+      include: { _count: { select: { properties: true } }, category: true },
     });
   }
 
   async deleteCategory(id: string, tenantId: string) {
-    const category = await this.prisma.propertyCategory.findFirst({
+    const category = await this.prisma.tenantSubcategory.findFirst({
       where: { id, deletedAt: null },
       include: {
         _count: { select: { properties: { where: { deletedAt: null } } } },
@@ -146,7 +151,7 @@ export class CategoryService {
       );
     }
 
-    await this.prisma.propertyCategory.update({
+    await this.prisma.tenantSubcategory.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
