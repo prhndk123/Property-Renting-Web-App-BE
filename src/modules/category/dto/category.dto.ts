@@ -11,12 +11,20 @@ export class CreateCategoryDto {
   @IsNotEmpty()
   @IsString()
   name!: string;
+
+  @IsNotEmpty()
+  @IsString()
+  categoryId!: string;
 }
 
 export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
 }
 
 export class GetCategoriesQueryDto {

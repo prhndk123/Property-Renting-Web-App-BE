@@ -20,13 +20,38 @@ export class PropertyService {
   }
 
   async createProperty(tenantId: string, data: CreatePropertyDto) {
-    const { imageUrls, ...propertyData } = data;
+    const { imageUrls, categoryId, tenantSubcategoryId, ...propertyData } =
+      data;
     const slug = this.generateSlug(data.name);
+
+    // Verify master category exists
+    const category = await this.prisma.propertyCategory.findUnique({
+      where: { id: categoryId },
+    });
+
+    if (!category) {
+      throw new ApiError("Invalid master category selected", 400);
+    }
+
+    if (tenantSubcategoryId) {
+      const subcategory = await this.prisma.tenantSubcategory.findUnique({
+        where: { id: tenantSubcategoryId },
+      });
+      if (!subcategory || subcategory.categoryId !== categoryId) {
+        throw new ApiError("Invalid subcategory selected", 400);
+      }
+    }
 
     return this.prisma.$transaction(async (tx: any) => {
       const property = await tx.property.create({
-        data: { ...propertyData, tenantId, slug },
-        include: { category: true },
+        data: {
+          ...propertyData,
+          tenantId,
+          slug,
+          categoryId,
+          tenantSubcategoryId,
+        },
+        include: { category: true, tenantSubcategory: true },
       });
 
       if (imageUrls && imageUrls.length > 0) {
@@ -40,7 +65,7 @@ export class PropertyService {
 
       return tx.property.findUnique({
         where: { id: property.id },
-        include: { category: true, images: true },
+        include: { category: true, tenantSubcategory: true, images: true },
       });
     });
   }
@@ -137,6 +162,7 @@ export class PropertyService {
         where,
         include: {
           category: true,
+          tenantSubcategory: true,
           images: true,
           rooms: {
             select: { basePrice: true },
@@ -176,6 +202,7 @@ export class PropertyService {
           orderBy,
           include: {
             category: true,
+            tenantSubcategory: true,
             images: true,
             rooms: {
               select: { basePrice: true },
@@ -251,12 +278,15 @@ export class PropertyService {
       where: { slug, deletedAt: null },
       include: {
         category: true,
+        tenantSubcategory: true,
         images: true,
         rooms: {
           where: { deletedAt: null },
           include: { images: true, inventories: true, peakSeasonRates: true },
         },
-        tenant: { select: { name: true, profilePicture: true } },
+        tenant: {
+          select: { name: true, businessName: true, profilePicture: true },
+        },
       },
     });
     if (!property) throw new ApiError("Property not found", 404);
@@ -300,7 +330,9 @@ export class PropertyService {
           where: { deletedAt: null },
           include: { images: true, inventories: true, peakSeasonRates: true },
         },
-        tenant: { select: { name: true, profilePicture: true } },
+        tenant: {
+          select: { name: true, businessName: true, profilePicture: true },
+        },
       },
     });
     if (!property) throw new ApiError("Property not found", 404);
@@ -339,13 +371,44 @@ export class PropertyService {
     if (!property) throw new ApiError("Property not found", 404);
     if (property.tenantId !== tenantId) throw new ApiError("Unauthorized", 403);
 
-    const { imageUrls, removedImageIds, ...updateData } = data;
+    const {
+      imageUrls,
+      removedImageIds,
+      categoryId,
+      tenantSubcategoryId,
+      ...updateData
+    } = data;
+
+    if (categoryId) {
+      // Verify master category exists
+      const category = await this.prisma.propertyCategory.findUnique({
+        where: { id: categoryId },
+      });
+      if (!category)
+        throw new ApiError("Invalid master category selected", 400);
+    }
+
+    if (tenantSubcategoryId) {
+      const subcategory = await this.prisma.tenantSubcategory.findUnique({
+        where: { id: tenantSubcategoryId },
+      });
+      if (
+        !subcategory ||
+        (categoryId && subcategory.categoryId !== categoryId)
+      ) {
+        throw new ApiError("Invalid subcategory selected", 400);
+      }
+    }
 
     return this.prisma.$transaction(async (tx: any) => {
       // Update property basic info
       await tx.property.update({
         where: { id },
-        data: updateData,
+        data: {
+          ...updateData,
+          ...(categoryId && { categoryId }),
+          ...(tenantSubcategoryId !== undefined && { tenantSubcategoryId }),
+        },
       });
 
       // Handle removed images
@@ -379,7 +442,11 @@ export class PropertyService {
 
       return tx.property.findUnique({
         where: { id },
-        include: { category: true, images: true },
+        include: {
+          category: true,
+          tenantSubcategory: true,
+          images: true,
+        },
       });
     });
   }
@@ -453,6 +520,7 @@ export class PropertyService {
         orderBy,
         include: {
           category: true,
+          tenantSubcategory: true,
           images: true,
           _count: {
             select: { rooms: true, reviews: true, reservations: true },

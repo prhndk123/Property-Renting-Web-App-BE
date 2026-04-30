@@ -33,6 +33,10 @@ export class CreatePropertyDto {
   categoryId!: string;
 
   @IsOptional()
+  @IsUUID()
+  tenantSubcategoryId?: string;
+
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
   imageUrls?: string[];
@@ -58,6 +62,10 @@ export class UpdatePropertyDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  tenantSubcategoryId?: string;
 
   @IsOptional()
   @IsArray()

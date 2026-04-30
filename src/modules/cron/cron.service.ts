@@ -50,7 +50,7 @@ export class CronService {
 
   private async cancelExpiredReservation(res: any) {
     const resId = res.id;
-    await this.prisma.$transaction(async (tx: any) => {
+    await this.prisma.$transaction(async (tx) => {
       await tx.payment.update({
         where: { reservationId: resId },
         data: { paymentStatus: "REJECTED" },
