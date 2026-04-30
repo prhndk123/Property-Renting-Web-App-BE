@@ -1,6 +1,7 @@
 import express, { Router } from "express";
 import { ReservationController } from "./reservation.controller.js";
 import { AuthMiddleware } from "../../middlewares/auth.middleware.js";
+import { UserRole } from "../../types/user-role.js";
 import { ValidationMiddleware } from "../../middlewares/validation.middleware.js";
 import {
   CreateReservationDto,
@@ -34,14 +35,27 @@ export class ReservationRouter {
     );
     this.router.post(
       "/",
+      this.authMiddleware.verifyRole([UserRole.USER]),
       this.validationMiddleware.validateBody(CreateReservationDto),
       this.ctrl.createReservation,
     );
     this.router.get("/:id", this.ctrl.getReservationById);
-    this.router.patch("/:id/payment-proof", this.ctrl.uploadPaymentProof);
-    this.router.patch("/:id/confirm", this.ctrl.confirmPayment);
+    this.router.patch(
+      "/:id/payment-proof",
+      this.authMiddleware.verifyRole([UserRole.USER]),
+      this.ctrl.uploadPaymentProof,
+    );
+    this.router.patch(
+      "/:id/confirm",
+      this.authMiddleware.verifyRole([UserRole.TENANT]),
+      this.ctrl.confirmPayment,
+    );
     this.router.post("/:id/cancel", this.ctrl.cancelReservation);
-    this.router.post("/:id/tenant-cancel", this.ctrl.cancelReservationByTenant);
+    this.router.post(
+      "/:id/tenant-cancel",
+      this.authMiddleware.verifyRole([UserRole.TENANT]),
+      this.ctrl.cancelReservationByTenant,
+    );
   };
 
   getRouter = () => this.router;

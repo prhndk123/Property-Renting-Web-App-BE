@@ -20,6 +20,17 @@ export class ReservationService {
 
   async createReservation(userId: string, data: CreateReservationDto) {
     const { propertyId, roomId, checkinDate, checkoutDate } = data;
+    
+    // Prevent tenant from booking their own property
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { tenantId: true }
+    });
+    
+    if (property?.tenantId === userId) {
+      throw new ApiError("You cannot book your own property", 400);
+    }
+
     const paymentMethod = data.paymentMethod || "MANUAL_TRANSFER";
     const info = await this.availability.calculateTotalPrice(
       roomId,

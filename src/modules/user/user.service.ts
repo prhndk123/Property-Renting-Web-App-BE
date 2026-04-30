@@ -94,15 +94,26 @@ export class UserService {
       .catch((e) => console.error("Mail failed", e));
   }
 
-  async updateProfile(id: string, body: UpdateProfileDto) {
+  async updateProfile(id: string, body: UpdateProfileDto, authUserId?: string, authUserRole?: string) {
+    // Ownership check: users can only update their own profile
+    if (authUserId && authUserId !== id) {
+      throw new ApiError("You can only update your own profile", 403);
+    }
+
     const current = await this.getUser(id);
     if (body.email) await this.checkEmail(body.email, id);
     if (body.profilePicture)
       await this.cleanupOldAvatar(current.profilePicture, body.profilePicture);
 
+    // Strip businessName if user is not a TENANT
+    const updateData: any = { ...body };
+    if (authUserRole !== "TENANT") {
+      delete updateData.businessName;
+    }
+
     const updated = await this.prisma.user.update({
       where: { id },
-      data: body,
+      data: updateData,
       omit: { password: true },
     });
     return { ...updated, message: "Profile updated successfully" };

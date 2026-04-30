@@ -193,17 +193,25 @@ export class App {
   private errorMiddleware() {
     // 404 handler
     this.app.use((req: Request, res: Response) => {
-      res.status(404).json({ message: "Not Found" });
+      res.status(404).json({ message: "Resource not found" });
     });
 
     // global error handler
     this.app.use(
       (err: any, req: Request, res: Response, next: NextFunction) => {
-        console.error(err);
+        console.error(`[ERROR] ${req.method} ${req.path}:`, err);
 
-        res.status(err.status || 500).json({
-          message: err.message || "Internal Server Error",
-          errors: err.errors || null,
+        const statusCode = err.status || 500;
+
+        // Only expose known error messages; hide internal/Prisma errors
+        const isKnownError = err.status && err.status < 500;
+        const message = isKnownError
+          ? err.message
+          : "Something went wrong. Please try again later.";
+
+        res.status(statusCode).json({
+          message,
+          errors: isKnownError ? err.errors || null : null,
         });
       },
     );
