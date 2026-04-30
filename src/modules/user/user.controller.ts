@@ -23,6 +23,11 @@ export class UserController {
   };
 
   updatePassword = async (req: Request, res: Response) => {
+    const authUser = res.locals.user;
+    if (authUser.id !== req.params.id) {
+      res.status(403).json({ message: "You can only change your own password" });
+      return;
+    }
     const result = await this.userService.updatePassword(
       req.params.id as string,
       req.body,
@@ -31,9 +36,12 @@ export class UserController {
   };
 
   updateProfile = async (req: Request, res: Response) => {
+    const authUser = res.locals.user;
     const result = await this.userService.updateProfile(
       req.params.id as string,
       req.body,
+      authUser.id,
+      authUser.role,
     );
     res.status(200).send(result);
   };

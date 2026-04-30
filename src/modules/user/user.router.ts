@@ -22,6 +22,9 @@ export class UserRouter {
   }
 
   private initRoutes = () => {
+    // All user routes require authentication
+    this.router.use(this.authMiddleware.verifyToken(process.env.JWT_SECRET!));
+
     this.router.get(
       "/",
       this.validationMiddleware.validateQuery(GetUsersQueryDto),
@@ -29,45 +32,36 @@ export class UserRouter {
     );
     this.router.get(
       "/me/saved-properties",
-      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.userController.getSavedProperties,
     );
     this.router.get(
       "/me/saved-properties/ids",
-      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.userController.getSavedPropertyIds,
     );
     this.router.get(
       "/me/payment-methods",
-      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.userController.getPaymentMethods,
     );
     this.router.post(
       "/me/payment-methods",
-      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.validationMiddleware.validateBody(CreatePaymentMethodDto),
       this.userController.addPaymentMethod,
     );
     this.router.delete(
       "/me/payment-methods/:methodId",
-      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.userController.deletePaymentMethod,
     );
     this.router.get("/:id", this.userController.getUser);
-    this.router.patch("/:id", this.userController.updateUser);
     this.router.patch(
       "/:id/password",
-      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.validationMiddleware.validateBody(UpdatePasswordDto),
       this.userController.updatePassword,
     );
     this.router.patch(
       "/:id/profile",
-      this.authMiddleware.verifyToken(process.env.JWT_SECRET!),
       this.validationMiddleware.validateBody(UpdateProfileDto),
       this.userController.updateProfile,
     );
-    this.router.delete("/:id", this.userController.deleteUser);
   };
 
   getRouter = () => {
