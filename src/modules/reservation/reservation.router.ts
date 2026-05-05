@@ -35,7 +35,7 @@ export class ReservationRouter {
     );
     this.router.post(
       "/",
-      this.authMiddleware.verifyRole([UserRole.USER]),
+      this.authMiddleware.verifyRole([UserRole.USER, UserRole.TENANT]),
       this.validationMiddleware.validateBody(CreateReservationDto),
       this.ctrl.createReservation,
     );
