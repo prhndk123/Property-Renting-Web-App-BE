@@ -60,19 +60,31 @@ export class CronService {
         data: { status: "CANCELLED" },
       });
 
-      // Release rooms
+      // Release room inventory (decrement bookedStock)
       const nights = Math.ceil(
         (res.checkoutDate.getTime() - res.checkinDate.getTime()) /
           (1000 * 3600 * 24),
       );
       for (const rr of res.reservationRooms) {
+        const qty = rr.qty || 1;
         for (let i = 0; i < nights; i++) {
           const date = new Date(res.checkinDate);
           date.setDate(date.getDate() + i);
-          await tx.roomAvailability.upsert({
+
+          const room = await tx.room.findFirst({
+            where: { id: rr.roomId, deletedAt: null },
+          });
+          const defaultStock = room?.qty || 1;
+
+          await tx.roomInventory.upsert({
             where: { roomId_date: { roomId: rr.roomId, date } },
-            update: { isAvailable: true },
-            create: { roomId: rr.roomId, date, isAvailable: true },
+            update: { bookedStock: { decrement: qty } },
+            create: {
+              roomId: rr.roomId,
+              date,
+              totalStock: defaultStock,
+              bookedStock: 0,
+            },
           });
         }
       }
