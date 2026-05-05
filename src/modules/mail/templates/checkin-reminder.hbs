@@ -1,45 +1,176 @@
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reminder: Check-in Tomorrow! 🏨</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #1a1a1a; background-color: #f5f5f5; margin: 0; padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-    .header { background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: white; padding: 40px 24px; text-align: center; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+      color: white;
+      padding: 40px 24px;
+      text-align: center;
+    }
     .header-icon { font-size: 48px; margin-bottom: 16px; }
     .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
     .header p { margin: 8px 0 0; font-size: 16px; opacity: 0.9; }
     .content { padding: 32px 24px; }
     .greeting { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1a1a1a; }
     .message { color: #4a4a4a; margin-bottom: 24px; }
-    .section-title { font-size: 16px; font-weight: 700; color: #1a1a1a; margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin: 28px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+    }
     .section-icon { margin-right: 8px; }
-    .details-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-    .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
+    .details-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .detail-row {
+      margin-bottom: 12px;
+      font-size: 14px;
+      overflow: hidden;
+    }
     .detail-row:last-child { margin-bottom: 0; }
-    .detail-label { color: #6b7280; font-weight: 500; }
-    .detail-value { color: #1a1a1a; font-weight: 600; text-align: right; }
-    .room-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px; }
-    .room-table th { background-color: #f1f5f9; color: #475569; font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid #e2e8f0; }
-    .room-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+    .detail-label {
+      color: #6b7280;
+      font-weight: 500;
+      float: left;
+    }
+    .detail-value {
+      color: #1a1a1a;
+      font-weight: 600;
+      text-align: right;
+      float: right;
+    }
+    .room-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .room-table th {
+      background-color: #f1f5f9;
+      color: #475569;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .room-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
     .room-table tr:last-child td { border-bottom: none; }
-    .total-row { margin-top: 12px; padding: 14px 16px; background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-    .total-label { color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 500; }
-    .total-value { color: #ffffff; font-size: 20px; font-weight: 700; }
-    .rules-box { background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-    .rule-item { display: flex; align-items: flex-start; margin-bottom: 10px; font-size: 13px; color: #4a4a4a; }
+    .total-row {
+      margin-top: 12px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .total-label {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      font-weight: 500;
+      float: left;
+    }
+    .total-value {
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: 700;
+      float: right;
+    }
+    .rules-box {
+      background-color: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .rule-item {
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #4a4a4a;
+    }
     .rule-item:last-child { margin-bottom: 0; }
-    .rule-icon { margin-right: 10px; font-size: 14px; flex-shrink: 0; margin-top: 2px; }
-    .rule-text { flex: 1; }
-    .tips-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-    .tip-item { display: flex; align-items: flex-start; margin-bottom: 10px; font-size: 13px; color: #4a4a4a; }
+    .rule-icon {
+      display: inline-block;
+      margin-right: 10px;
+      font-size: 14px;
+      vertical-align: top;
+    }
+    .rule-text {
+      display: inline-block;
+      vertical-align: top;
+      max-width: 90%;
+    }
+    .tips-box {
+      background-color: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .tip-item {
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #4a4a4a;
+    }
     .tip-item:last-child { margin-bottom: 0; }
-    .tip-icon { margin-right: 10px; font-size: 14px; flex-shrink: 0; margin-top: 2px; }
-    .tip-text { flex: 1; }
-    .booking-id { display: inline-block; background-color: #eef2ff; color: #4f46e5; font-family: monospace; font-size: 14px; font-weight: 700; padding: 4px 10px; border-radius: 4px; letter-spacing: 1px; }
+    .tip-icon {
+      display: inline-block;
+      margin-right: 10px;
+      font-size: 14px;
+      vertical-align: top;
+    }
+    .tip-text {
+      display: inline-block;
+      vertical-align: top;
+      max-width: 90%;
+    }
+    .booking-id {
+      display: inline-block;
+      background-color: #eef2ff;
+      color: #4f46e5;
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
     .subtext { color: #6b7280; font-size: 13px; margin-top: 20px; }
-    .footer { background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0; }
+    .footer {
+      background-color: #f8fafc;
+      padding: 24px;
+      text-align: center;
+      border-top: 1px solid #e2e8f0;
+    }
     .footer p { margin: 0 0 8px 0; font-size: 13px; color: #6b7280; }
     .brand { font-weight: 600; color: #4f46e5; }
   </style>
@@ -53,18 +184,24 @@
       <p>Your stay is just around the corner</p>
     </div>
 
+    <!-- Content -->
     <div class="content">
       <p class="greeting">Hi {{name}},</p>
       <p class="message">
-        Just a quick reminder that your booking at <strong>{{propertyName}}</strong> starts <strong>tomorrow</strong>! 
-        Pack your bags and get ready for a fantastic experience. Below are your booking details.
+        Just a quick reminder that your booking at <strong>{{propertyName}}</strong> starts
+        <strong>tomorrow</strong>! Pack your bags and get ready for a fantastic experience.
+        Below are your booking details.
       </p>
 
       <!-- Booking ID -->
-      <p style="margin-bottom: 20px;">Booking ID: <span class="booking-id">#{{reservationId}}</span></p>
+      <p style="margin-bottom: 20px;">
+        Booking ID: <span class="booking-id">#{{reservationId}}</span>
+      </p>
 
       <!-- ═══ BOOKING DETAILS ═══ -->
-      <div class="section-title"><span class="section-icon">📋</span> Booking Details</div>
+      <div class="section-title">
+        <span class="section-icon">📋</span> Booking Details
+      </div>
       <div class="details-box">
         <div class="detail-row">
           <span class="detail-label">Property</span>
@@ -89,7 +226,9 @@
       </div>
 
       <!-- ═══ ROOM DETAILS ═══ -->
-      <div class="section-title"><span class="section-icon">🛏️</span> Room Details</div>
+      <div class="section-title">
+        <span class="section-icon">🛏️</span> Room Details
+      </div>
       <div class="details-box" style="padding: 0; overflow: hidden;">
         <table class="room-table">
           <thead>
@@ -116,32 +255,51 @@
       </div>
 
       <!-- ═══ PROPERTY USAGE GUIDELINES ═══ -->
-      <div class="section-title"><span class="section-icon">📖</span> Tata Cara Penggunaan Properti</div>
+      <div class="section-title">
+        <span class="section-icon">📖</span> Tata Cara Penggunaan Properti
+      </div>
       <div class="tips-box">
         <div class="tip-item">
           <span class="tip-icon">🕐</span>
-          <span class="tip-text"><strong>Check-in:</strong> Waktu check-in mulai pukul <strong>14:00</strong>. Silakan menghubungi pengelola properti jika ingin melakukan early check-in.</span>
+          <span class="tip-text">
+            <strong>Check-in:</strong> Waktu check-in mulai pukul <strong>14:00</strong>.
+            Silakan menghubungi pengelola properti jika ingin melakukan early check-in.
+          </span>
         </div>
         <div class="tip-item">
           <span class="tip-icon">🕛</span>
-          <span class="tip-text"><strong>Check-out:</strong> Waktu check-out maksimal pukul <strong>12:00</strong> pada tanggal check-out. Keterlambatan dapat dikenakan biaya tambahan.</span>
+          <span class="tip-text">
+            <strong>Check-out:</strong> Waktu check-out maksimal pukul <strong>12:00</strong>
+            pada tanggal check-out. Keterlambatan dapat dikenakan biaya tambahan.
+          </span>
         </div>
         <div class="tip-item">
           <span class="tip-icon">🪪</span>
-          <span class="tip-text"><strong>Identitas:</strong> Siapkan kartu identitas (KTP/Passport) saat check-in untuk proses verifikasi.</span>
+          <span class="tip-text">
+            <strong>Identitas:</strong> Siapkan kartu identitas (KTP/Passport) saat check-in
+            untuk proses verifikasi.
+          </span>
         </div>
         <div class="tip-item">
           <span class="tip-icon">🔑</span>
-          <span class="tip-text"><strong>Kunci & Akses:</strong> Kunci kamar akan diberikan saat check-in. Pastikan kunci dikembalikan saat check-out.</span>
+          <span class="tip-text">
+            <strong>Kunci &amp; Akses:</strong> Kunci kamar akan diberikan saat check-in.
+            Pastikan kunci dikembalikan saat check-out.
+          </span>
         </div>
         <div class="tip-item">
           <span class="tip-icon">📶</span>
-          <span class="tip-text"><strong>Fasilitas:</strong> Informasi WiFi dan fasilitas lainnya akan diberikan oleh pengelola saat Anda tiba.</span>
+          <span class="tip-text">
+            <strong>Fasilitas:</strong> Informasi WiFi dan fasilitas lainnya akan diberikan
+            oleh pengelola saat Anda tiba.
+          </span>
         </div>
       </div>
 
       <!-- ═══ PROPERTY RULES ═══ -->
-      <div class="section-title"><span class="section-icon">⚠️</span> Aturan Penggunaan Properti</div>
+      <div class="section-title">
+        <span class="section-icon">⚠️</span> Aturan Penggunaan Properti
+      </div>
       <div class="rules-box">
         <div class="rule-item">
           <span class="rule-icon">🚭</span>
@@ -174,7 +332,8 @@
       </div>
 
       <p class="subtext">
-        Jika Anda memiliki pertanyaan atau membutuhkan bantuan, silakan hubungi pengelola properti melalui dashboard Rentivo Anda. Selamat berlibur! 🌟
+        Jika Anda memiliki pertanyaan atau membutuhkan bantuan, silakan hubungi pengelola
+        properti melalui dashboard Rentivo Anda. Selamat berlibur! 🌟
       </p>
     </div>
 

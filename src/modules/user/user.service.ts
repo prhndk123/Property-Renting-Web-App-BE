@@ -94,7 +94,12 @@ export class UserService {
       .catch((e) => console.error("Mail failed", e));
   }
 
-  async updateProfile(id: string, body: UpdateProfileDto, authUserId?: string, authUserRole?: string) {
+  async updateProfile(
+    id: string,
+    body: UpdateProfileDto,
+    authUserId?: string,
+    authUserRole?: string,
+  ) {
     // Ownership check: users can only update their own profile
     if (authUserId && authUserId !== id) {
       throw new ApiError("You can only update your own profile", 403);

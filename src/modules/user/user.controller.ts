@@ -25,7 +25,9 @@ export class UserController {
   updatePassword = async (req: Request, res: Response) => {
     const authUser = res.locals.user;
     if (authUser.id !== req.params.id) {
-      res.status(403).json({ message: "You can only change your own password" });
+      res
+        .status(403)
+        .json({ message: "You can only change your own password" });
       return;
     }
     const result = await this.userService.updatePassword(
